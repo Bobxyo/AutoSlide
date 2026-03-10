@@ -43,16 +43,24 @@ export async function generatePresentation(
   report: string,
   config: AppConfig
 ): Promise<Presentation> {
+  const prompt = `Based on the following research report, generate a highly professional, visually appealing presentation. 
+Extract the key points into slides. 
+For each slide, provide:
+- A compelling 'title'
+- 'content': An array of detailed bullet points (MUST NOT BE EMPTY).
+- 'layout': Choose the best layout from: 'title', 'content', 'image-right', 'image-left', 'quote', 'chart'.
+- 'imagePlaceholder': If layout is 'image-right' or 'image-left', provide a highly descriptive 'suggestedPrompt' for an AI image generator.
+- 'chartData': If layout is 'chart', provide an array of objects with 'name' and 'value' properties representing data from the report.
+- 'speakerNotes': Detailed speaker notes.
+
+Report:
+${report}`;
+
   if (config.llmProvider === 'gemini') {
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: `Based on the following research report, generate a presentation. 
-      Extract the key points into slides. 
-      For each slide, provide a title, bullet points, a layout type ('title', 'content', 'image-right', 'image-left', 'quote'), a suggested prompt for an image placeholder if applicable, and detailed speaker notes.
-      
-      Report:
-      ${report}`,
+      contents: prompt,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -67,11 +75,21 @@ export async function generatePresentation(
                   id: { type: Type.STRING },
                   title: { type: Type.STRING },
                   content: { type: Type.ARRAY, items: { type: Type.STRING } },
-                  layout: { type: Type.STRING, description: "Must be one of: 'title', 'content', 'image-right', 'image-left', 'quote'" },
+                  layout: { type: Type.STRING, description: "Must be one of: 'title', 'content', 'image-right', 'image-left', 'quote', 'chart'" },
                   imagePlaceholder: {
                     type: Type.OBJECT,
                     properties: {
                       suggestedPrompt: { type: Type.STRING }
+                    }
+                  },
+                  chartData: {
+                    type: Type.ARRAY,
+                    items: {
+                      type: Type.OBJECT,
+                      properties: {
+                        name: { type: Type.STRING },
+                        value: { type: Type.NUMBER }
+                      }
                     }
                   },
                   speakerNotes: { type: Type.STRING }
@@ -103,12 +121,7 @@ export async function generatePresentation(
           },
           {
             role: "user",
-            content: `Based on the following research report, generate a presentation. 
-            Extract the key points into slides. 
-            For each slide, provide a title, bullet points, a layout type ('title', 'content', 'image-right', 'image-left', 'quote'), a suggested prompt for an image placeholder if applicable, and detailed speaker notes.
-            
-            Report:
-            ${report}`
+            content: prompt
           }
         ],
         response_format: { type: "json_object" }

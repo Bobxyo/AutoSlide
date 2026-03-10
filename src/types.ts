@@ -2,11 +2,12 @@ export interface Slide {
   id: string;
   title: string;
   content: string[];
-  layout: 'title' | 'content' | 'image-right' | 'image-left' | 'quote';
+  layout: 'title' | 'content' | 'image-right' | 'image-left' | 'quote' | 'chart';
   imagePlaceholder?: {
     suggestedPrompt: string;
     url?: string;
   };
+  chartData?: { name: string; value: number }[];
   speakerNotes: string;
 }
 
@@ -29,6 +30,7 @@ export interface AppConfig {
   imageHeight: number;
   imageSteps: number;
   imageGuidance: number;
+  googleClientId?: string;
 }
 
 export interface HistoryTask {

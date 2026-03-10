@@ -24,6 +24,8 @@ const defaultConfig: AppConfig = {
   imageGuidance: 7.5
 };
 
+import { GoogleOAuthProvider } from '@react-oauth/google';
+
 export default function App() {
   const [config, setConfig] = useState<AppConfig>(() => {
     const saved = localStorage.getItem('autoslide_config');
@@ -299,7 +301,13 @@ export default function App() {
               )}
             </div>
           ) : (
-            <SlideEditor presentation={presentation} setPresentation={setPresentation} config={config} />
+            config.googleClientId ? (
+              <GoogleOAuthProvider clientId={config.googleClientId}>
+                <SlideEditor presentation={presentation} setPresentation={setPresentation} config={config} />
+              </GoogleOAuthProvider>
+            ) : (
+              <SlideEditor presentation={presentation} setPresentation={setPresentation} config={config} />
+            )
           )}
         </div>
       </main>

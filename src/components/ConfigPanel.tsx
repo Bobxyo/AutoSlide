@@ -119,6 +119,16 @@ export function ConfigPanel({ config, setConfig }: ConfigPanelProps) {
             </div>
           </>
         )}
+        <div>
+          <label className="block text-sm font-medium text-neutral-700 mb-1">Google Client ID (For Slides Export)</label>
+          <input 
+            type="text" 
+            value={config.googleClientId || ''}
+            onChange={(e) => handleChange('googleClientId', e.target.value)}
+            placeholder="YOUR_CLIENT_ID.apps.googleusercontent.com"
+            className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          />
+        </div>
       </div>
     </div>
   );
