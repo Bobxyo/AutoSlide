@@ -60,33 +60,51 @@ export async function runResearch(
                       `${baseUrl}/report/${taskId}`
                   ];
                   
-                  // Generate variations of the topic for filename guessing
-                  // gpt-researcher saves files as task_{task_id}_{topic}.md
+                  // GPT-Researcher filename truncation logic:
+                  // It often truncates the base filename (task_ID_topic) to exactly 60 characters.
+                  const prefix = `task_${taskId}_`;
+                  const maxTopicLen = 60 - prefix.length;
+                  
                   const topicVariations = new Set<string>();
                   topicVariations.add(topic);
                   topicVariations.add(topic.trim());
                   topicVariations.add(topic.replace(/[^\w\s-]/g, "").trim());
                   
-                  const truncated = new Set<string>();
-                  for (const t of topicVariations) {
+                  for (const t of Array.from(topicVariations)) {
                       if (!t) continue;
-                      truncated.add(t);
-                      if (t.length > 40) truncated.add(t.substring(0, 40).trim());
-                      if (t.length > 44) truncated.add(t.substring(0, 44).trim());
-                      if (t.length > 45) truncated.add(t.substring(0, 45).trim());
-                      if (t.length > 50) truncated.add(t.substring(0, 50).trim());
-                  }
-                  
-                  for (const t of truncated) {
-                      paths.push(`${baseUrl}/outputs/task_${taskId}_${t}.md`);
-                      paths.push(`${baseUrl}/outputs/task_${taskId}_${encodeURIComponent(t)}.md`);
-                      paths.push(`${baseUrl}/outputs/task_${taskId}_${t.replace(/\s+/g, '_')}.md`);
+                      
+                      // 1. Exact topic
+                      paths.push(`${baseUrl}/outputs/${prefix}${t}.md`);
+                      
+                      // 2. Truncated to exactly 60 chars total filename length
+                      if (t.length > maxTopicLen) {
+                          paths.push(`${baseUrl}/outputs/${prefix}${t.substring(0, maxTopicLen)}.md`);
+                          paths.push(`${baseUrl}/outputs/${prefix}${t.substring(0, maxTopicLen).trim()}.md`);
+                      }
+                      
+                      // 3. Other common truncations just in case
+                      paths.push(`${baseUrl}/outputs/${prefix}${t.substring(0, 40).trim()}.md`);
+                      paths.push(`${baseUrl}/outputs/${prefix}${t.substring(0, 44).trim()}.md`);
+                      paths.push(`${baseUrl}/outputs/${prefix}${t.substring(0, 50).trim()}.md`);
                   }
                   
                   paths.push(`${baseUrl}/outputs/${taskId}.md`);
                   paths.push(`${baseUrl}/outputs/task_${taskId}.md`);
                   paths.push(`${baseUrl}/files/${taskId}.md`);
                   paths.push(`${baseUrl}/files/task_${taskId}.md`);
+                  
+                  // 1.5 Try to parse /outputs/ directory listing if enabled
+                  try {
+                      const dirRes = await fetch(`${baseUrl}/outputs/`);
+                      if (dirRes.ok) {
+                          const html = await dirRes.text();
+                          const regex = new RegExp(`(task_${taskId}[^"'>]*\\.md)`, 'g');
+                          let match;
+                          while ((match = regex.exec(html)) !== null) {
+                              paths.push(`${baseUrl}/outputs/${match[1]}`);
+                          }
+                      }
+                  } catch(e) {}
 
                   for (const path of paths) {
                       try {
