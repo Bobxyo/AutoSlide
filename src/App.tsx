@@ -21,7 +21,8 @@ const defaultConfig: AppConfig = {
   imageWidth: 1536,
   imageHeight: 2048,
   imageSteps: 30,
-  imageGuidance: 7.5
+  imageGuidance: 7.5,
+  googleClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 };
 
 import { GoogleOAuthProvider } from '@react-oauth/google';
@@ -301,13 +302,9 @@ export default function App() {
               )}
             </div>
           ) : (
-            config.googleClientId ? (
-              <GoogleOAuthProvider clientId={config.googleClientId}>
-                <SlideEditor presentation={presentation} setPresentation={setPresentation} config={config} />
-              </GoogleOAuthProvider>
-            ) : (
+            <GoogleOAuthProvider clientId={config.googleClientId || 'dummy_client_id'}>
               <SlideEditor presentation={presentation} setPresentation={setPresentation} config={config} />
-            )
+            </GoogleOAuthProvider>
           )}
         </div>
       </main>

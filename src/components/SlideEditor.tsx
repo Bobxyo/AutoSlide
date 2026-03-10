@@ -150,7 +150,7 @@ export function SlideEditor({ presentation, setPresentation, config }: SlideEdit
         </div>
 
         <div className="flex-1 overflow-auto p-8 flex items-center justify-center">
-          <SlideCanvas slide={activeSlide} updateSlide={updateSlide} config={config} />
+          <SlideCanvas slide={activeSlide} updateSlide={updateSlide} config={config} themeId={selectedTheme} />
         </div>
         
         {/* Speaker Notes Panel */}
@@ -205,8 +205,16 @@ export function SlideEditor({ presentation, setPresentation, config }: SlideEdit
   );
 }
 
-function SlideCanvas({ slide, updateSlide, config }: { slide: Slide, updateSlide: (s: Slide) => void, config: AppConfig }) {
+function SlideCanvas({ slide, updateSlide, config, themeId }: { slide: Slide, updateSlide: (s: Slide) => void, config: AppConfig, themeId: string }) {
   const [generatingImg, setGeneratingImg] = useState(false);
+
+  const themes: Record<string, any> = {
+    modern: { bg: '#FFFFFF', title: '#312E81', text: '#4B5563', accent: '#4F46E5' },
+    dark: { bg: '#171717', title: '#F9FAFB', text: '#D1D5DB', accent: '#818CF8' },
+    corporate: { bg: '#FFFFFF', title: '#1E3A8A', text: '#374151', accent: '#2563EB' },
+    creative: { bg: '#FFF1F2', title: '#881337', text: '#4C0519', accent: '#E11D48' }
+  };
+  const theme = themes[themeId] || themes.modern;
 
   const handleGenerateImage = async (customPrompt?: string) => {
     const promptToUse = customPrompt || slide.imagePlaceholder?.suggestedPrompt;
@@ -248,21 +256,21 @@ function SlideCanvas({ slide, updateSlide, config }: { slide: Slide, updateSlide
     switch (slide.layout) {
       case 'title':
         return (
-          <div className="flex flex-col items-center justify-center h-full text-center bg-gradient-to-br from-indigo-50 to-white p-12 rounded-xl">
-            <h1 className="text-6xl font-extrabold text-indigo-950 mb-8 tracking-tight">{title}</h1>
-            <div className="text-2xl text-indigo-700/80 space-y-3 font-medium max-w-3xl">
+          <div className="flex flex-col items-center justify-center h-full text-center p-12 rounded-xl" style={{ backgroundColor: theme.bg }}>
+            <h1 className="text-6xl font-extrabold mb-8 tracking-tight" style={{ color: theme.title }}>{title}</h1>
+            <div className="text-2xl space-y-3 font-medium max-w-3xl" style={{ color: theme.text }}>
               {contentArray.map((c, i) => <p key={i}>{c}</p>)}
             </div>
           </div>
         );
       case 'content':
         return (
-          <div className="flex flex-col h-full p-8">
-            <h2 className="text-4xl font-bold text-neutral-900 mb-10 pb-4 border-b-2 border-indigo-100">{title}</h2>
-            <ul className="text-2xl text-neutral-700 space-y-6 flex-1">
+          <div className="flex flex-col h-full p-8" style={{ backgroundColor: theme.bg }}>
+            <h2 className="text-4xl font-bold mb-10 pb-4 border-b-2" style={{ color: theme.title, borderColor: theme.accent + '40' }}>{title}</h2>
+            <ul className="text-2xl space-y-6 flex-1" style={{ color: theme.text }}>
               {contentArray.map((c, i) => (
                 <li key={i} className="flex items-start gap-4">
-                  <span className="text-indigo-500 mt-1.5 text-xl">✦</span>
+                  <span className="mt-1.5 text-xl" style={{ color: theme.accent }}>✦</span>
                   <span className="leading-relaxed">{c}</span>
                 </li>
               ))}
@@ -271,13 +279,13 @@ function SlideCanvas({ slide, updateSlide, config }: { slide: Slide, updateSlide
         );
       case 'image-right':
         return (
-          <div className="flex flex-col h-full p-8">
-            <h2 className="text-4xl font-bold text-neutral-900 mb-10 pb-4 border-b-2 border-indigo-100">{title}</h2>
+          <div className="flex flex-col h-full p-8" style={{ backgroundColor: theme.bg }}>
+            <h2 className="text-4xl font-bold mb-10 pb-4 border-b-2" style={{ color: theme.title, borderColor: theme.accent + '40' }}>{title}</h2>
             <div className="flex flex-1 gap-12">
-              <ul className="flex-1 text-xl text-neutral-700 space-y-6">
+              <ul className="flex-1 text-xl space-y-6" style={{ color: theme.text }}>
                 {contentArray.map((c, i) => (
                   <li key={i} className="flex items-start gap-3">
-                    <span className="text-indigo-500 mt-1">•</span>
+                    <span className="mt-1" style={{ color: theme.accent }}>•</span>
                     <span className="leading-relaxed">{c}</span>
                   </li>
                 ))}
@@ -295,8 +303,8 @@ function SlideCanvas({ slide, updateSlide, config }: { slide: Slide, updateSlide
         );
       case 'image-left':
         return (
-          <div className="flex flex-col h-full p-8">
-            <h2 className="text-4xl font-bold text-neutral-900 mb-10 pb-4 border-b-2 border-indigo-100">{title}</h2>
+          <div className="flex flex-col h-full p-8" style={{ backgroundColor: theme.bg }}>
+            <h2 className="text-4xl font-bold mb-10 pb-4 border-b-2" style={{ color: theme.title, borderColor: theme.accent + '40' }}>{title}</h2>
             <div className="flex flex-1 gap-12">
               <div className="flex-1 flex items-center justify-center">
                 <ImagePlaceholder 
@@ -306,10 +314,10 @@ function SlideCanvas({ slide, updateSlide, config }: { slide: Slide, updateSlide
                   updateImage={(url) => updateSlide({ ...slide, imagePlaceholder: { ...slide.imagePlaceholder, suggestedPrompt: slide.imagePlaceholder?.suggestedPrompt || '', url } })}
                 />
               </div>
-              <ul className="flex-1 text-xl text-neutral-700 space-y-6">
+              <ul className="flex-1 text-xl space-y-6" style={{ color: theme.text }}>
                 {contentArray.map((c, i) => (
                   <li key={i} className="flex items-start gap-3">
-                    <span className="text-indigo-500 mt-1">•</span>
+                    <span className="mt-1" style={{ color: theme.accent }}>•</span>
                     <span className="leading-relaxed">{c}</span>
                   </li>
                 ))}
@@ -319,10 +327,10 @@ function SlideCanvas({ slide, updateSlide, config }: { slide: Slide, updateSlide
         );
       case 'quote':
         return (
-          <div className="flex flex-col items-center justify-center h-full text-center px-24 bg-neutral-50 rounded-xl relative overflow-hidden">
-            <div className="absolute top-12 left-12 text-9xl text-indigo-100 font-serif leading-none">"</div>
-            <h2 className="text-2xl font-semibold text-indigo-500 mb-10 uppercase tracking-[0.2em]">{title}</h2>
-            <blockquote className="text-4xl font-serif italic text-neutral-800 leading-relaxed relative z-10">
+          <div className="flex flex-col items-center justify-center h-full text-center px-24 rounded-xl relative overflow-hidden" style={{ backgroundColor: theme.bg }}>
+            <div className="absolute top-12 left-12 text-9xl font-serif leading-none" style={{ color: theme.accent + '20' }}>"</div>
+            <h2 className="text-2xl font-semibold mb-10 uppercase tracking-[0.2em]" style={{ color: theme.accent }}>{title}</h2>
+            <blockquote className="text-4xl font-serif italic leading-relaxed relative z-10" style={{ color: theme.text }}>
               {contentArray.join(' ')}
             </blockquote>
           </div>
@@ -330,36 +338,36 @@ function SlideCanvas({ slide, updateSlide, config }: { slide: Slide, updateSlide
       case 'chart':
         const hasData = slide.chartData && slide.chartData.length > 0;
         return (
-          <div className="flex flex-col h-full p-8">
-            <h2 className="text-4xl font-bold text-neutral-900 mb-8 pb-4 border-b-2 border-indigo-100">{title}</h2>
+          <div className="flex flex-col h-full p-8" style={{ backgroundColor: theme.bg }}>
+            <h2 className="text-4xl font-bold mb-8 pb-4 border-b-2" style={{ color: theme.title, borderColor: theme.accent + '40' }}>{title}</h2>
             <div className="flex flex-1 gap-8">
               <div className="flex-1 flex flex-col justify-center">
-                <ul className="text-xl text-neutral-700 space-y-5">
+                <ul className="text-xl space-y-5" style={{ color: theme.text }}>
                   {contentArray.map((c, i) => (
                     <li key={i} className="flex items-start gap-3">
-                      <span className="text-indigo-500 mt-1">•</span>
+                      <span className="mt-1" style={{ color: theme.accent }}>•</span>
                       <span className="leading-relaxed">{c}</span>
                     </li>
                   ))}
                 </ul>
               </div>
-              <div className="flex-1 flex items-center justify-center bg-white rounded-xl shadow-sm border border-neutral-100 p-6">
+              <div className="flex-1 flex items-center justify-center rounded-xl shadow-sm border p-6" style={{ backgroundColor: theme.bg === '#171717' ? '#262626' : '#FFFFFF', borderColor: theme.accent + '20' }}>
                 {hasData ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={slide.chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f5f5f5" />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#6b7280'}} />
-                      <YAxis axisLine={false} tickLine={false} tick={{fill: '#6b7280'}} />
-                      <Tooltip cursor={{fill: '#f3f4f6'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
-                      <Bar dataKey="value" fill="#4f46e5" radius={[4, 4, 0, 0]} maxBarSize={60}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme.text + '20'} />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: theme.text}} />
+                      <YAxis axisLine={false} tickLine={false} tick={{fill: theme.text}} />
+                      <Tooltip cursor={{fill: theme.text + '10'}} contentStyle={{borderRadius: '8px', border: 'none', backgroundColor: theme.bg, color: theme.text, boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                      <Bar dataKey="value" fill={theme.accent} radius={[4, 4, 0, 0]} maxBarSize={60}>
                         {slide.chartData?.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          <Cell key={`cell-${index}`} fill={theme.accent} opacity={1 - (index * 0.15)} />
                         ))}
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="text-neutral-400 flex flex-col items-center">
+                  <div className="flex flex-col items-center" style={{ color: theme.text + '80' }}>
                     <Loader2 className="w-8 h-8 mb-2 opacity-50" />
                     <p>No chart data available</p>
                   </div>
@@ -370,12 +378,12 @@ function SlideCanvas({ slide, updateSlide, config }: { slide: Slide, updateSlide
         );
       default:
         return (
-          <div className="flex flex-col h-full p-8">
-            <h2 className="text-4xl font-bold text-neutral-900 mb-10 pb-4 border-b-2 border-indigo-100">{title}</h2>
-            <ul className="text-2xl text-neutral-700 space-y-6 flex-1">
+          <div className="flex flex-col h-full p-8" style={{ backgroundColor: theme.bg }}>
+            <h2 className="text-4xl font-bold mb-10 pb-4 border-b-2" style={{ color: theme.title, borderColor: theme.accent + '40' }}>{title}</h2>
+            <ul className="text-2xl space-y-6 flex-1" style={{ color: theme.text }}>
               {contentArray.map((c, i) => (
                 <li key={i} className="flex items-start gap-4">
-                  <span className="text-indigo-500 mt-1.5 text-xl">✦</span>
+                  <span className="mt-1.5 text-xl" style={{ color: theme.accent }}>✦</span>
                   <span className="leading-relaxed">{c}</span>
                 </li>
               ))}
@@ -386,7 +394,7 @@ function SlideCanvas({ slide, updateSlide, config }: { slide: Slide, updateSlide
   };
 
   return (
-    <div className="w-full max-w-5xl aspect-video bg-white shadow-xl rounded-sm overflow-hidden p-12 relative">
+    <div className="w-full max-w-5xl aspect-video shadow-xl rounded-sm overflow-hidden p-12 relative" style={{ backgroundColor: theme.bg }}>
       {renderContent()}
     </div>
   );

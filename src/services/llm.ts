@@ -156,7 +156,7 @@ export async function generateImage(prompt: string, config: AppConfig): Promise<
     });
     
     if (!res.ok) {
-      throw new Error(`Custom Image API error: ${res.statusText}`);
+      throw new Error(`Custom Image API error (404 Not Found at ${config.imageEndpoint}): ${res.statusText}`);
     }
     
     const data = await res.json();
@@ -188,14 +188,15 @@ export async function generateImage(prompt: string, config: AppConfig): Promise<
     throw new Error("Failed to generate image with Gemini");
   } else {
     // OpenAI compatible DALL-E
-    const res = await fetch(`${config.openaiEndpoint}/images/generations`, {
+    const endpoint = config.imageEndpoint ? config.imageEndpoint.replace(/\/$/, '') : 'https://api.openai.com/v1';
+    const res = await fetch(`${endpoint}/images/generations`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${config.openaiApiKey}`
+        "Authorization": `Bearer ${config.imageApiKey || config.openaiApiKey}`
       },
       body: JSON.stringify({
-        model: "dall-e-3",
+        model: config.imageModel || "dall-e-3",
         prompt: prompt,
         n: 1,
         size: "1024x1024",
@@ -208,6 +209,11 @@ export async function generateImage(prompt: string, config: AppConfig): Promise<
     }
     
     const data = await res.json();
-    return `data:image/png;base64,${data.data[0].b64_json}`;
+    if (data.data && data.data[0] && data.data[0].b64_json) {
+      return `data:image/png;base64,${data.data[0].b64_json}`;
+    } else if (data.data && data.data[0] && data.data[0].url) {
+      return data.data[0].url;
+    }
+    throw new Error("Unknown response format from OpenAI compatible API");
   }
 }
