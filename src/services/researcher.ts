@@ -55,14 +55,39 @@ export async function runResearch(
           try {
               // 1. Try specific task endpoints if we have a task ID
               if (taskId) {
-                  const paths = [
+                  const paths: string[] = [
                       `${baseUrl}/api/reports/${taskId}`,
-                      `${baseUrl}/report/${taskId}`,
-                      `${baseUrl}/outputs/${taskId}.md`,
-                      `${baseUrl}/files/${taskId}.md`,
-                      `${baseUrl}/outputs/task_${taskId}.md`,
-                      `${baseUrl}/files/task_${taskId}.md`
+                      `${baseUrl}/report/${taskId}`
                   ];
+                  
+                  // Generate variations of the topic for filename guessing
+                  // gpt-researcher saves files as task_{task_id}_{topic}.md
+                  const topicVariations = new Set<string>();
+                  topicVariations.add(topic);
+                  topicVariations.add(topic.trim());
+                  topicVariations.add(topic.replace(/[^\w\s-]/g, "").trim());
+                  
+                  const truncated = new Set<string>();
+                  for (const t of topicVariations) {
+                      if (!t) continue;
+                      truncated.add(t);
+                      if (t.length > 40) truncated.add(t.substring(0, 40).trim());
+                      if (t.length > 44) truncated.add(t.substring(0, 44).trim());
+                      if (t.length > 45) truncated.add(t.substring(0, 45).trim());
+                      if (t.length > 50) truncated.add(t.substring(0, 50).trim());
+                  }
+                  
+                  for (const t of truncated) {
+                      paths.push(`${baseUrl}/outputs/task_${taskId}_${t}.md`);
+                      paths.push(`${baseUrl}/outputs/task_${taskId}_${encodeURIComponent(t)}.md`);
+                      paths.push(`${baseUrl}/outputs/task_${taskId}_${t.replace(/\s+/g, '_')}.md`);
+                  }
+                  
+                  paths.push(`${baseUrl}/outputs/${taskId}.md`);
+                  paths.push(`${baseUrl}/outputs/task_${taskId}.md`);
+                  paths.push(`${baseUrl}/files/${taskId}.md`);
+                  paths.push(`${baseUrl}/files/task_${taskId}.md`);
+
                   for (const path of paths) {
                       try {
                           const checkRes = await fetch(path);
@@ -72,6 +97,16 @@ export async function runResearch(
                               if (ct.includes("json")) {
                                   const j = await checkRes.json();
                                   text = j.report || j.output || j.content || JSON.stringify(j);
+                                  
+                                  // If the JSON response contains a path to the report, try to fetch it
+                                  if (j.path || j.report_path || j.file) {
+                                      const reportPath = j.path || j.report_path || j.file;
+                                      const fileRes = await fetch(`${baseUrl}/${reportPath.replace(/^\//, '')}`);
+                                      if (fileRes.ok) {
+                                          const fileText = await fileRes.text();
+                                          if (fileText.length > 200) return fileText;
+                                      }
+                                  }
                               } else {
                                   text = await checkRes.text();
                               }
