@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, FileText, Presentation as PresentationIcon, Download, Play } from 'lucide-react';
-import { AppConfig, Presentation, Slide } from './types';
+import { Settings, FileText, Presentation as PresentationIcon, Download, Play, History, Trash2, Plus } from 'lucide-react';
+import { AppConfig, Presentation, Slide, HistoryTask } from './types';
 import { runResearch } from './services/researcher';
 import { generatePresentation } from './services/llm';
 import { ConfigPanel } from './components/ConfigPanel';
@@ -37,9 +37,25 @@ export default function App() {
     return defaultConfig;
   });
 
+  const [history, setHistory] = useState<HistoryTask[]>(() => {
+    const saved = localStorage.getItem('autoslide_history');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Failed to parse saved history', e);
+      }
+    }
+    return [];
+  });
+
   useEffect(() => {
     localStorage.setItem('autoslide_config', JSON.stringify(config));
   }, [config]);
+
+  useEffect(() => {
+    localStorage.setItem('autoslide_history', JSON.stringify(history));
+  }, [history]);
 
   const [topic, setTopic] = useState('');
   const [report, setReport] = useState<string | null>(null);
@@ -47,23 +63,48 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState('');
   const [showConfig, setShowConfig] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
 
   const handleGenerate = async () => {
     if (!topic) return;
+    
+    const newTaskId = Date.now().toString();
+    const newTask: HistoryTask = {
+      id: newTaskId,
+      topic,
+      createdAt: new Date().toISOString(),
+      status: 'researching'
+    };
+    
+    setHistory(prev => [newTask, ...prev]);
     setLoading(true);
+    setReport(null);
+    setPresentation(null);
+    setShowHistory(false);
+    setShowConfig(false);
+
     try {
-      setLoadingMsg('Generating research report...');
-      const generatedReport = await runResearch(topic, config.gptResearcherEndpoint);
+      setLoadingMsg('Starting research...');
+      const generatedReport = await runResearch(topic, config.gptResearcherEndpoint, (msg) => {
+        setLoadingMsg(msg);
+      });
       setReport(generatedReport);
+      
+      setHistory(prev => prev.map(t => t.id === newTaskId ? { ...t, status: 'generating_ppt', report: generatedReport } : t));
 
       setLoadingMsg('Converting report to presentation...');
       const generatedPresentation = await generatePresentation(generatedReport, config);
       setPresentation(generatedPresentation);
+      
+      setHistory(prev => prev.map(t => t.id === newTaskId ? { ...t, status: 'done', presentation: generatedPresentation } : t));
     } catch (e) {
       console.error(e);
-      alert(`Error generating presentation: ${e instanceof Error ? e.message : 'Check console for details.'}`);
+      const errorMsg = e instanceof Error ? e.message : 'Unknown error';
+      alert(`Error generating presentation: ${errorMsg}`);
+      setHistory(prev => prev.map(t => t.id === newTaskId ? { ...t, status: 'error', error: errorMsg } : t));
     } finally {
       setLoading(false);
+      setLoadingMsg('');
     }
   };
 
@@ -78,31 +119,50 @@ export default function App() {
       alert('Error exporting presentation.');
     } finally {
       setLoading(false);
+      setLoadingMsg('');
     }
+  };
+
+  const loadHistoryTask = (task: HistoryTask) => {
+    setTopic(task.topic);
+    setReport(task.report || null);
+    setPresentation(task.presentation || null);
+    setShowHistory(false);
+  };
+
+  const deleteHistoryTask = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setHistory(prev => prev.filter(t => t.id !== id));
+  };
+
+  const startNew = () => {
+    setTopic('');
+    setReport(null);
+    setPresentation(null);
+    setShowHistory(false);
   };
 
   return (
     <div className="min-h-screen bg-neutral-50 flex flex-col font-sans text-neutral-900">
       <header className="bg-white border-b border-neutral-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 cursor-pointer" onClick={startNew}>
           <PresentationIcon className="w-6 h-6 text-indigo-600" />
           <h1 className="text-xl font-semibold tracking-tight">AutoSlide Pro</h1>
         </div>
         <div className="flex items-center gap-4">
-          {presentation && (
-            <button 
-              onClick={handleExport}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
-            >
-              <Download className="w-4 h-4" />
-              Export PPTX
-            </button>
-          )}
           <button 
-            onClick={() => setShowConfig(!showConfig)}
-            className="p-2 text-neutral-500 hover:bg-neutral-100 rounded-full transition-colors"
+            onClick={() => { setShowHistory(!showHistory); setShowConfig(false); }}
+            className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors ${showHistory ? 'bg-indigo-50 text-indigo-700' : 'text-neutral-600 hover:bg-neutral-100'}`}
           >
-            <Settings className="w-5 h-5" />
+            <History className="w-4 h-4" />
+            History
+          </button>
+          <button 
+            onClick={() => { setShowConfig(!showConfig); setShowHistory(false); }}
+            className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors ${showConfig ? 'bg-indigo-50 text-indigo-700' : 'text-neutral-600 hover:bg-neutral-100'}`}
+          >
+            <Settings className="w-4 h-4" />
+            Settings
           </button>
         </div>
       </header>
@@ -111,6 +171,50 @@ export default function App() {
         {showConfig && (
           <div className="w-80 border-r border-neutral-200 bg-white p-6 overflow-y-auto">
             <ConfigPanel config={config} setConfig={setConfig} />
+          </div>
+        )}
+
+        {showHistory && (
+          <div className="w-80 border-r border-neutral-200 bg-white p-6 overflow-y-auto flex flex-col">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-semibold">Recent Tasks</h2>
+              <button onClick={startNew} className="p-1 text-neutral-500 hover:text-indigo-600 hover:bg-indigo-50 rounded">
+                <Plus className="w-5 h-5" />
+              </button>
+            </div>
+            {history.length === 0 ? (
+              <p className="text-sm text-neutral-500 text-center py-8">No history yet.</p>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {history.map(task => (
+                  <div 
+                    key={task.id} 
+                    onClick={() => loadHistoryTask(task)}
+                    className="p-3 border border-neutral-200 rounded-lg hover:border-indigo-300 hover:shadow-sm cursor-pointer transition-all group"
+                  >
+                    <div className="flex justify-between items-start mb-1">
+                      <h3 className="font-medium text-sm line-clamp-2 pr-4">{task.topic}</h3>
+                      <button 
+                        onClick={(e) => deleteHistoryTask(task.id, e)}
+                        className="text-neutral-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="flex justify-between items-center text-xs text-neutral-500">
+                      <span>{new Date(task.createdAt).toLocaleDateString()}</span>
+                      <span className={`px-2 py-0.5 rounded-full ${
+                        task.status === 'done' ? 'bg-green-100 text-green-700' : 
+                        task.status === 'error' ? 'bg-red-100 text-red-700' : 
+                        'bg-blue-100 text-blue-700'
+                      }`}>
+                        {task.status}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -144,7 +248,10 @@ export default function App() {
                   </button>
                 </div>
                 {loading && (
-                  <p className="text-sm text-neutral-500 mt-4 animate-pulse">{loadingMsg}</p>
+                  <div className="mt-6 p-4 bg-indigo-50 rounded-lg border border-indigo-100 flex items-center gap-3">
+                    <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                    <p className="text-sm text-indigo-700 font-medium">{loadingMsg}</p>
+                  </div>
                 )}
               </div>
 

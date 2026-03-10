@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Presentation, Slide, AppConfig } from '../types';
 import { cn } from '../lib/utils';
-import { ImagePlus, Loader2, MessageSquareText } from 'lucide-react';
+import { ImagePlus, Loader2, MessageSquareText, Download, LayoutTemplate, Presentation as PresentationIcon } from 'lucide-react';
 import { generateImage } from '../services/llm';
+import { exportToPPTX } from '../services/export';
 
 interface SlideEditorProps {
   presentation: Presentation;
@@ -12,12 +13,25 @@ interface SlideEditorProps {
 
 export function SlideEditor({ presentation, setPresentation, config }: SlideEditorProps) {
   const [activeSlideIdx, setActiveSlideIdx] = useState(0);
+  const [exporting, setExporting] = useState(false);
   const activeSlide = presentation.slides[activeSlideIdx];
 
   const updateSlide = (updatedSlide: Slide) => {
     const newSlides = [...presentation.slides];
     newSlides[activeSlideIdx] = updatedSlide;
     setPresentation({ ...presentation, slides: newSlides });
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      await exportToPPTX(presentation);
+    } catch (e) {
+      console.error(e);
+      alert('Error exporting presentation.');
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -48,6 +62,37 @@ export function SlideEditor({ presentation, setPresentation, config }: SlideEdit
 
       {/* Main Editor Area */}
       <div className="flex-1 flex flex-col overflow-hidden bg-neutral-200/50">
+        {/* Editor Toolbar */}
+        <div className="h-14 bg-white border-b border-neutral-200 px-4 flex items-center justify-between">
+          <div className="text-sm font-medium text-neutral-700">
+            Slide {activeSlideIdx + 1} of {presentation.slides.length}
+          </div>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => alert("Template library coming soon! You will be able to upload your .pptx templates here.")}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-neutral-700 bg-white border border-neutral-300 rounded-md hover:bg-neutral-50 transition-colors"
+            >
+              <LayoutTemplate className="w-4 h-4" />
+              Templates
+            </button>
+            <button 
+              onClick={() => alert("Google Slides integration requires OAuth setup. Coming soon!")}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-neutral-700 bg-white border border-neutral-300 rounded-md hover:bg-neutral-50 transition-colors"
+            >
+              <PresentationIcon className="w-4 h-4" />
+              Google Slides
+            </button>
+            <button 
+              onClick={handleExport}
+              disabled={exporting}
+              className="flex items-center gap-2 px-4 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors disabled:opacity-50"
+            >
+              {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              Export PPTX
+            </button>
+          </div>
+        </div>
+
         <div className="flex-1 overflow-auto p-8 flex items-center justify-center">
           <SlideCanvas slide={activeSlide} updateSlide={updateSlide} config={config} />
         </div>

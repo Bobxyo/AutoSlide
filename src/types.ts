@@ -30,3 +30,13 @@ export interface AppConfig {
   imageSteps: number;
   imageGuidance: number;
 }
+
+export interface HistoryTask {
+  id: string;
+  topic: string;
+  createdAt: string;
+  status: 'researching' | 'generating_ppt' | 'done' | 'error';
+  report?: string;
+  presentation?: Presentation;
+  error?: string;
+}
