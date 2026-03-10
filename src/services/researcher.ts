@@ -55,10 +55,7 @@ export async function runResearch(
           try {
               // 1. Try specific task endpoints if we have a task ID
               if (taskId) {
-                  const paths: string[] = [
-                      `${baseUrl}/api/reports/${taskId}`,
-                      `${baseUrl}/report/${taskId}`
-                  ];
+                  const paths: string[] = [];
                   
                   // GPT-Researcher filename truncation logic:
                   // It often truncates the base filename (task_ID_topic) to exactly 60 characters.
@@ -90,8 +87,6 @@ export async function runResearch(
                   
                   paths.push(`${baseUrl}/outputs/${taskId}.md`);
                   paths.push(`${baseUrl}/outputs/task_${taskId}.md`);
-                  paths.push(`${baseUrl}/files/${taskId}.md`);
-                  paths.push(`${baseUrl}/files/task_${taskId}.md`);
                   
                   // 1.5 Try to parse /outputs/ directory listing if enabled
                   try {
@@ -110,69 +105,10 @@ export async function runResearch(
                       try {
                           const checkRes = await fetch(path);
                           if (checkRes.ok) {
-                              const ct = checkRes.headers.get("content-type") || "";
-                              let text = "";
-                              if (ct.includes("json")) {
-                                  const j = await checkRes.json();
-                                  text = j.report || j.output || j.content || JSON.stringify(j);
-                                  
-                                  // If the JSON response contains a path to the report, try to fetch it
-                                  if (j.path || j.report_path || j.file) {
-                                      const reportPath = j.path || j.report_path || j.file;
-                                      const fileRes = await fetch(`${baseUrl}/${reportPath.replace(/^\//, '')}`);
-                                      if (fileRes.ok) {
-                                          const fileText = await fileRes.text();
-                                          if (fileText.length > 200) return fileText;
-                                      }
-                                  }
-                              } else {
-                                  text = await checkRes.text();
-                              }
+                              const text = await checkRes.text();
                               if (text && text.length > 200) return text;
                           }
                       } catch (e) {}
-                  }
-              }
-
-              // 2. Fallback: check /files/
-              const filesRes = await fetch(`${baseUrl}/files/`);
-              if (filesRes.ok) {
-                  const filesData = await filesRes.json();
-                  let filenames: string[] = [];
-                  if (Array.isArray(filesData)) {
-                      filenames = filesData.map(f => typeof f === 'string' ? f : (f.name || f.filename || ''));
-                  } else if (filesData && (filesData.files || filesData.data)) {
-                      const arr = filesData.files || filesData.data;
-                      filenames = arr.map((f: any) => typeof f === 'string' ? f : (f.name || f.filename || ''));
-                  }
-
-                  const mdFiles = filenames.filter(f => f.endsWith('.md'));
-                  mdFiles.sort().reverse();
-
-                  for (const file of mdFiles) {
-                      let isMatch = false;
-                      if (taskId && file.includes(taskId)) isMatch = true;
-                      else if (!taskId) {
-                          const topicWords = topic.toLowerCase().split(/[\s\-_]+/).filter(w => w.length > 2);
-                          isMatch = topicWords.length === 0 || topicWords.some(w => file.toLowerCase().includes(w));
-                      }
-
-                      if (isMatch) {
-                          const pathsToTry = [
-                              `${baseUrl}/${file}`,
-                              `${baseUrl}/outputs/${file}`,
-                              `${baseUrl}/files/${file}`
-                          ];
-                          for (const path of pathsToTry) {
-                              try {
-                                  const contentRes = await fetch(path);
-                                  if (contentRes.ok) {
-                                      const text = await contentRes.text();
-                                      if (text.length > 200) return text;
-                                  }
-                              } catch (e) {}
-                          }
-                      }
                   }
               }
           } catch (e) {

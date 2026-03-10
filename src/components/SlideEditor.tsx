@@ -68,8 +68,8 @@ export function SlideEditor({ presentation, setPresentation, config }: SlideEdit
               {idx + 1}
             </div>
             <div className="p-2 text-[8px] leading-tight">
-              <div className="font-bold mb-1 truncate">{slide.title}</div>
-              {slide.content.slice(0, 3).map((c, i) => (
+              <div className="font-bold mb-1 truncate">{slide.title || 'Untitled Slide'}</div>
+              {(Array.isArray(slide.content) ? slide.content : (typeof slide.content === 'string' ? [slide.content] : [])).slice(0, 3).map((c, i) => (
                 <div key={i} className="truncate text-neutral-500">• {c}</div>
               ))}
             </div>
@@ -156,32 +156,35 @@ function SlideCanvas({ slide, updateSlide, config }: { slide: Slide, updateSlide
   };
 
   const renderContent = () => {
+    const contentArray = Array.isArray(slide.content) ? slide.content : (typeof slide.content === 'string' ? [slide.content] : []);
+    const title = slide.title || 'Untitled Slide';
+
     switch (slide.layout) {
       case 'title':
         return (
           <div className="flex flex-col items-center justify-center h-full text-center">
-            <h1 className="text-5xl font-bold text-neutral-900 mb-6">{slide.title}</h1>
+            <h1 className="text-5xl font-bold text-neutral-900 mb-6">{title}</h1>
             <div className="text-xl text-neutral-500 space-y-2">
-              {slide.content.map((c, i) => <p key={i}>{c}</p>)}
+              {contentArray.map((c, i) => <p key={i}>{c}</p>)}
             </div>
           </div>
         );
       case 'content':
         return (
           <div className="flex flex-col h-full">
-            <h2 className="text-4xl font-bold text-neutral-900 mb-8">{slide.title}</h2>
+            <h2 className="text-4xl font-bold text-neutral-900 mb-8">{title}</h2>
             <ul className="list-disc list-inside text-2xl text-neutral-700 space-y-4">
-              {slide.content.map((c, i) => <li key={i}>{c}</li>)}
+              {contentArray.map((c, i) => <li key={i}>{c}</li>)}
             </ul>
           </div>
         );
       case 'image-right':
         return (
           <div className="flex flex-col h-full">
-            <h2 className="text-4xl font-bold text-neutral-900 mb-8">{slide.title}</h2>
+            <h2 className="text-4xl font-bold text-neutral-900 mb-8">{title}</h2>
             <div className="flex flex-1 gap-8">
               <ul className="flex-1 list-disc list-inside text-xl text-neutral-700 space-y-4">
-                {slide.content.map((c, i) => <li key={i}>{c}</li>)}
+                {contentArray.map((c, i) => <li key={i}>{c}</li>)}
               </ul>
               <div className="flex-1 flex items-center justify-center">
                 <ImagePlaceholder 
@@ -197,7 +200,7 @@ function SlideCanvas({ slide, updateSlide, config }: { slide: Slide, updateSlide
       case 'image-left':
         return (
           <div className="flex flex-col h-full">
-            <h2 className="text-4xl font-bold text-neutral-900 mb-8">{slide.title}</h2>
+            <h2 className="text-4xl font-bold text-neutral-900 mb-8">{title}</h2>
             <div className="flex flex-1 gap-8">
               <div className="flex-1 flex items-center justify-center">
                 <ImagePlaceholder 
@@ -208,7 +211,7 @@ function SlideCanvas({ slide, updateSlide, config }: { slide: Slide, updateSlide
                 />
               </div>
               <ul className="flex-1 list-disc list-inside text-xl text-neutral-700 space-y-4">
-                {slide.content.map((c, i) => <li key={i}>{c}</li>)}
+                {contentArray.map((c, i) => <li key={i}>{c}</li>)}
               </ul>
             </div>
           </div>
@@ -216,14 +219,21 @@ function SlideCanvas({ slide, updateSlide, config }: { slide: Slide, updateSlide
       case 'quote':
         return (
           <div className="flex flex-col items-center justify-center h-full text-center px-16">
-            <h2 className="text-2xl font-medium text-neutral-400 mb-8 uppercase tracking-widest">{slide.title}</h2>
+            <h2 className="text-2xl font-medium text-neutral-400 mb-8 uppercase tracking-widest">{title}</h2>
             <blockquote className="text-4xl font-serif italic text-neutral-800 leading-relaxed">
-              "{slide.content.join(' ')}"
+              "{contentArray.join(' ')}"
             </blockquote>
           </div>
         );
       default:
-        return null;
+        return (
+          <div className="flex flex-col h-full">
+            <h2 className="text-4xl font-bold text-neutral-900 mb-8">{title}</h2>
+            <ul className="list-disc list-inside text-2xl text-neutral-700 space-y-4">
+              {contentArray.map((c, i) => <li key={i}>{c}</li>)}
+            </ul>
+          </div>
+        );
     }
   };
 
