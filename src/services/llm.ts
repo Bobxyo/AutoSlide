@@ -12,7 +12,31 @@ function parseLLMJSON(text: string): any {
   if (cleanText.endsWith('```')) {
     cleanText = cleanText.substring(0, cleanText.length - 3);
   }
-  return JSON.parse(cleanText.trim());
+  
+  try {
+    const parsed = JSON.parse(cleanText.trim());
+    
+    // If it's an array, assume it's the slides array directly
+    if (Array.isArray(parsed)) {
+      return {
+        title: "Generated Presentation",
+        slides: parsed
+      };
+    }
+    
+    // Sometimes LLMs wrap the response in a "presentation" key
+    if (parsed.presentation && parsed.presentation.slides) {
+      return parsed.presentation;
+    }
+    // Sometimes they wrap it in a "slides" key but missing title
+    if (parsed.slides && !parsed.title) {
+      parsed.title = "Generated Presentation";
+    }
+    return parsed;
+  } catch (e) {
+    console.error("Failed to parse LLM JSON:", cleanText);
+    throw new Error("Failed to parse presentation data from AI. Please try again.");
+  }
 }
 
 export async function generatePresentation(

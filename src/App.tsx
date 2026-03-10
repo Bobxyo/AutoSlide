@@ -257,9 +257,40 @@ export default function App() {
 
               {report && (
                 <div className="bg-white p-8 rounded-2xl shadow-sm border border-neutral-200">
-                  <div className="flex items-center gap-2 mb-6 pb-4 border-b border-neutral-100">
-                    <FileText className="w-5 h-5 text-neutral-400" />
-                    <h3 className="text-lg font-medium">Research Report</h3>
+                  <div className="flex items-center justify-between mb-6 pb-4 border-b border-neutral-100">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-5 h-5 text-neutral-400" />
+                      <h3 className="text-lg font-medium">Research Report</h3>
+                    </div>
+                    <button 
+                      onClick={async () => {
+                        if (!topic || !report) return;
+                        setLoading(true);
+                        setLoadingMsg('Converting report to presentation...');
+                        try {
+                          const generatedPresentation = await generatePresentation(report, config);
+                          setPresentation(generatedPresentation);
+                          
+                          // Update history
+                          setHistory(prev => prev.map(t => 
+                            (t.topic === topic && t.report === report) 
+                              ? { ...t, status: 'done', presentation: generatedPresentation } 
+                              : t
+                          ));
+                        } catch (e) {
+                          console.error(e);
+                          alert(`Error generating presentation: ${e instanceof Error ? e.message : 'Unknown error'}`);
+                        } finally {
+                          setLoading(false);
+                          setLoadingMsg('');
+                        }
+                      }}
+                      disabled={loading}
+                      className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm font-medium transition-colors"
+                    >
+                      {loading ? <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" /> : <PresentationIcon className="w-4 h-4" />}
+                      Generate Slides from Report
+                    </button>
                   </div>
                   <div className="prose prose-neutral max-w-none">
                     <ReactMarkdown>{typeof report === 'string' ? report : JSON.stringify(report)}</ReactMarkdown>

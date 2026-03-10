@@ -14,10 +14,13 @@ interface SlideEditorProps {
 export function SlideEditor({ presentation, setPresentation, config }: SlideEditorProps) {
   const [activeSlideIdx, setActiveSlideIdx] = useState(0);
   const [exporting, setExporting] = useState(false);
-  const activeSlide = presentation.slides[activeSlideIdx];
+  
+  // Safety check in case LLM returns invalid format
+  const slides = presentation?.slides || [];
+  const activeSlide = slides[activeSlideIdx];
 
   const updateSlide = (updatedSlide: Slide) => {
-    const newSlides = [...presentation.slides];
+    const newSlides = [...slides];
     newSlides[activeSlideIdx] = updatedSlide;
     setPresentation({ ...presentation, slides: newSlides });
   };
@@ -34,11 +37,25 @@ export function SlideEditor({ presentation, setPresentation, config }: SlideEdit
     }
   };
 
+  if (!slides || slides.length === 0) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-8 text-center">
+        <div>
+          <PresentationIcon className="w-12 h-12 text-neutral-300 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-neutral-700 mb-2">Failed to generate slides</h2>
+          <p className="text-neutral-500 max-w-md mx-auto">
+            The AI model returned an invalid format. Please try generating the presentation again.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-1 overflow-hidden">
       {/* Thumbnails Sidebar */}
       <div className="w-64 bg-neutral-100 border-r border-neutral-200 overflow-y-auto p-4 flex flex-col gap-4">
-        {presentation.slides.map((slide, idx) => (
+        {slides.map((slide, idx) => (
           <div 
             key={slide.id}
             onClick={() => setActiveSlideIdx(idx)}
@@ -65,7 +82,7 @@ export function SlideEditor({ presentation, setPresentation, config }: SlideEdit
         {/* Editor Toolbar */}
         <div className="h-14 bg-white border-b border-neutral-200 px-4 flex items-center justify-between">
           <div className="text-sm font-medium text-neutral-700">
-            Slide {activeSlideIdx + 1} of {presentation.slides.length}
+            Slide {activeSlideIdx + 1} of {slides.length}
           </div>
           <div className="flex items-center gap-2">
             <button 
