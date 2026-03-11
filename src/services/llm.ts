@@ -159,6 +159,17 @@ export async function generateImage(prompt: string, config: AppConfig): Promise<
       throw new Error(`Custom Image API error (404 Not Found at ${config.imageEndpoint}): ${res.statusText}`);
     }
     
+    const contentType = res.headers.get("content-type") || "";
+    if (!contentType.includes("application/json")) {
+      const blob = await res.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    }
+
     const data = await res.json();
     
     // Handle various possible response formats
@@ -208,6 +219,17 @@ export async function generateImage(prompt: string, config: AppConfig): Promise<
       throw new Error(`OpenAI Image API error: ${res.statusText}`);
     }
     
+    const contentType = res.headers.get("content-type") || "";
+    if (!contentType.includes("application/json")) {
+      const blob = await res.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    }
+
     const data = await res.json();
     if (data.data && data.data[0] && data.data[0].b64_json) {
       return `data:image/png;base64,${data.data[0].b64_json}`;
