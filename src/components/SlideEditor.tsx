@@ -317,16 +317,14 @@ function ScaledSlide({ slide, updateSlide, config, themeId, interactive = true }
         style={{ 
           width: '1024px', 
           height: '576px', 
-          transform: `scale(${scale})`,
-          transformOrigin: 'top left',
+          transform: `translate(-50%, -50%) scale(${scale})`,
           position: 'absolute',
           left: '50%',
           top: '50%',
-          marginLeft: '-512px',
-          marginTop: '-288px',
+          transformOrigin: 'center',
           pointerEvents: interactive ? 'auto' : 'none'
         }}
-        className="bg-white"
+        className="bg-white shadow-sm"
       >
         <SlideCanvas slide={slide} updateSlide={updateSlide} config={config} themeId={themeId} interactive={interactive} />
       </div>
@@ -338,10 +336,10 @@ function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }
   const [generatingImg, setGeneratingImg] = useState(false);
 
   const themes: Record<string, any> = {
-    modern: { bg: '#FFFFFF', title: '#312E81', text: '#4B5563', accent: '#4F46E5' },
-    dark: { bg: '#171717', title: '#F9FAFB', text: '#D1D5DB', accent: '#818CF8' },
-    corporate: { bg: '#FFFFFF', title: '#1E3A8A', text: '#374151', accent: '#2563EB' },
-    creative: { bg: '#FFF1F2', title: '#881337', text: '#4C0519', accent: '#E11D48' }
+    modern: { bg: '#F8FAFC', title: '#0F172A', text: '#334155', accent: '#4F46E5', accentBg: '#E0E7FF' },
+    dark: { bg: '#0F172A', title: '#F8FAFC', text: '#CBD5E1', accent: '#818CF8', accentBg: '#1E293B' },
+    corporate: { bg: '#FFFFFF', title: '#1E3A8A', text: '#475569', accent: '#2563EB', accentBg: '#DBEAFE' },
+    creative: { bg: '#FFF1F2', title: '#881337', text: '#701A75', accent: '#E11D48', accentBg: '#FFE4E6' }
   };
   const theme = themes[themeId] || themes.modern;
 
@@ -387,41 +385,57 @@ function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }
     switch (slide.layout) {
       case 'title':
         return (
-          <div className="flex flex-col items-center justify-center h-full text-center p-12 rounded-xl" style={{ backgroundColor: theme.bg }}>
-            <h1 className="text-5xl font-extrabold mb-8 tracking-tight" style={{ color: theme.title }}>{title}</h1>
-            <div className="text-xl space-y-3 font-medium max-w-3xl" style={{ color: theme.text }}>
-              {contentArray.map((c, i) => <p key={i}>{c}</p>)}
+          <div className="flex flex-col items-center justify-center h-full text-center p-16 relative overflow-hidden" style={{ backgroundColor: theme.bg }}>
+            {/* Decorative background elements */}
+            <div className="absolute top-0 left-0 w-full h-2" style={{ backgroundColor: theme.accent }}></div>
+            <div className="absolute -top-24 -right-24 w-64 h-64 rounded-full opacity-20" style={{ backgroundColor: theme.accent }}></div>
+            <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full opacity-10" style={{ backgroundColor: theme.accent }}></div>
+            
+            <div className="relative z-10 max-w-4xl">
+              <h1 className="text-6xl font-black mb-8 tracking-tight leading-tight" style={{ color: theme.title }}>{title}</h1>
+              <div className="w-24 h-1.5 mx-auto mb-8 rounded-full" style={{ backgroundColor: theme.accent }}></div>
+              <div className="text-2xl space-y-4 font-medium opacity-90" style={{ color: theme.text }}>
+                {contentArray.map((c, i) => <p key={i}>{c}</p>)}
+              </div>
             </div>
           </div>
         );
       case 'content':
         return (
-          <div className="flex flex-col h-full p-8" style={{ backgroundColor: theme.bg }}>
-            <h2 className="text-3xl font-bold mb-8 pb-4 border-b-2" style={{ color: theme.title, borderColor: theme.accent + '40' }}>{title}</h2>
-            <ul className="text-xl space-y-5 flex-1" style={{ color: theme.text }}>
+          <div className="flex flex-col h-full p-12 relative" style={{ backgroundColor: theme.bg }}>
+            <div className="absolute top-0 left-0 w-2 h-full" style={{ backgroundColor: theme.accent }}></div>
+            <div className="mb-10 pl-6">
+              <h2 className="text-4xl font-bold tracking-tight" style={{ color: theme.title }}>{title}</h2>
+            </div>
+            <div className="flex-1 pl-6 grid grid-cols-1 gap-6 content-start">
               {contentArray.map((c, i) => (
-                <li key={i} className="flex items-start gap-4">
-                  <span className="mt-1 text-lg" style={{ color: theme.accent }}>✦</span>
-                  <span className="leading-relaxed">{c}</span>
-                </li>
+                <div key={i} className="flex items-start gap-5 p-6 rounded-2xl shadow-sm border border-black/5" style={{ backgroundColor: theme.bg === '#0F172A' ? '#1E293B' : '#FFFFFF' }}>
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold" style={{ backgroundColor: theme.accentBg, color: theme.accent }}>
+                    {i + 1}
+                  </div>
+                  <p className="text-xl leading-relaxed pt-1" style={{ color: theme.text }}>{c}</p>
+                </div>
               ))}
-            </ul>
+            </div>
           </div>
         );
       case 'image-right':
         return (
-          <div className="flex flex-col h-full p-8" style={{ backgroundColor: theme.bg }}>
-            <h2 className="text-3xl font-bold mb-8 pb-4 border-b-2" style={{ color: theme.title, borderColor: theme.accent + '40' }}>{title}</h2>
-            <div className="flex flex-1 gap-10">
-              <ul className="flex-1 text-lg space-y-5" style={{ color: theme.text }}>
+          <div className="flex h-full" style={{ backgroundColor: theme.bg }}>
+            <div className="w-1/2 p-12 flex flex-col justify-center relative">
+              <div className="absolute top-12 left-12 w-12 h-1.5 rounded-full" style={{ backgroundColor: theme.accent }}></div>
+              <h2 className="text-4xl font-bold mb-10 mt-8 leading-tight" style={{ color: theme.title }}>{title}</h2>
+              <ul className="text-xl space-y-6 flex-1">
                 {contentArray.map((c, i) => (
-                  <li key={i} className="flex items-start gap-3">
-                    <span className="mt-1" style={{ color: theme.accent }}>•</span>
-                    <span className="leading-relaxed">{c}</span>
+                  <li key={i} className="flex items-start gap-4">
+                    <span className="mt-2 w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: theme.accent }}></span>
+                    <span className="leading-relaxed" style={{ color: theme.text }}>{c}</span>
                   </li>
                 ))}
               </ul>
-              <div className="flex-1 flex items-center justify-center">
+            </div>
+            <div className="w-1/2 p-6">
+              <div className="w-full h-full rounded-3xl overflow-hidden shadow-2xl relative">
                 <ImagePlaceholder 
                   placeholder={slide.imagePlaceholder} 
                   onGenerate={handleGenerateImage} 
@@ -435,10 +449,9 @@ function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }
         );
       case 'image-left':
         return (
-          <div className="flex flex-col h-full p-8" style={{ backgroundColor: theme.bg }}>
-            <h2 className="text-3xl font-bold mb-8 pb-4 border-b-2" style={{ color: theme.title, borderColor: theme.accent + '40' }}>{title}</h2>
-            <div className="flex flex-1 gap-10">
-              <div className="flex-1 flex items-center justify-center">
+          <div className="flex h-full" style={{ backgroundColor: theme.bg }}>
+            <div className="w-1/2 p-6">
+              <div className="w-full h-full rounded-3xl overflow-hidden shadow-2xl relative">
                 <ImagePlaceholder 
                   placeholder={slide.imagePlaceholder} 
                   onGenerate={handleGenerateImage} 
@@ -447,11 +460,15 @@ function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }
                   interactive={interactive}
                 />
               </div>
-              <ul className="flex-1 text-lg space-y-5" style={{ color: theme.text }}>
+            </div>
+            <div className="w-1/2 p-12 flex flex-col justify-center relative">
+              <div className="absolute top-12 left-12 w-12 h-1.5 rounded-full" style={{ backgroundColor: theme.accent }}></div>
+              <h2 className="text-4xl font-bold mb-10 mt-8 leading-tight" style={{ color: theme.title }}>{title}</h2>
+              <ul className="text-xl space-y-6 flex-1">
                 {contentArray.map((c, i) => (
-                  <li key={i} className="flex items-start gap-3">
-                    <span className="mt-1" style={{ color: theme.accent }}>•</span>
-                    <span className="leading-relaxed">{c}</span>
+                  <li key={i} className="flex items-start gap-4">
+                    <span className="mt-2 w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: theme.accent }}></span>
+                    <span className="leading-relaxed" style={{ color: theme.text }}>{c}</span>
                   </li>
                 ))}
               </ul>
@@ -460,16 +477,21 @@ function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }
         );
       case 'quote':
         return (
-          <div className="flex flex-col items-center justify-center h-full text-center px-24 rounded-xl relative overflow-hidden" style={{ backgroundColor: theme.bg }}>
-            <div className="absolute top-8 left-12 text-8xl font-serif leading-none" style={{ color: theme.accent + '20' }}>"</div>
-            <h2 className="text-xl font-semibold mb-8 uppercase tracking-[0.2em]" style={{ color: theme.accent }}>{title}</h2>
-            <blockquote className="text-3xl font-serif italic leading-relaxed relative z-10" style={{ color: theme.text }}>
+          <div className="flex flex-col items-center justify-center h-full text-center px-32 relative overflow-hidden" style={{ backgroundColor: theme.accent }}>
+            <div className="absolute top-0 left-0 w-full h-full opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '32px 32px' }}></div>
+            <div className="absolute -top-10 -left-10 text-[200px] font-serif leading-none opacity-20 text-white">"</div>
+            <h2 className="text-2xl font-bold mb-12 uppercase tracking-[0.3em] text-white/80 relative z-10">{title}</h2>
+            <blockquote className="text-4xl font-serif italic leading-relaxed text-white relative z-10">
               {contentArray.join(' ')}
             </blockquote>
+            <div className="w-24 h-1 mt-12 rounded-full bg-white/30 relative z-10"></div>
           </div>
         );
       case 'chart':
         const hasData = slide.chartData && slide.chartData.length > 0;
+        const chartBg = theme.bg === '#0F172A' ? '#1E293B' : '#FFFFFF';
+        const chartTextColor = theme.bg === '#0F172A' ? '#CBD5E1' : '#334155';
+        
         const renderChart = () => {
           if (!hasData) return null;
           const data = slide.chartData;
@@ -481,8 +503,8 @@ function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }
                     <Pie data={data} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={2} dataKey="value">
                       {data?.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
                     </Pie>
-                    <Tooltip contentStyle={{borderRadius: '8px', border: 'none', backgroundColor: theme.bg, color: theme.text, boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
-                    <Legend />
+                    <Tooltip contentStyle={{borderRadius: '8px', border: 'none', backgroundColor: chartBg, color: chartTextColor, boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                    <Legend wrapperStyle={{ color: chartTextColor }} />
                   </PieChart>
                 </ResponsiveContainer>
               );
@@ -490,10 +512,10 @@ function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }
               return (
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme.text + '20'} />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: theme.text}} />
-                    <YAxis axisLine={false} tickLine={false} tick={{fill: theme.text}} />
-                    <Tooltip cursor={{fill: theme.text + '10'}} contentStyle={{borderRadius: '8px', border: 'none', backgroundColor: theme.bg, color: theme.text, boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartTextColor + '20'} />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: chartTextColor}} />
+                    <YAxis axisLine={false} tickLine={false} tick={{fill: chartTextColor}} />
+                    <Tooltip cursor={{fill: chartTextColor + '10'}} contentStyle={{borderRadius: '8px', border: 'none', backgroundColor: chartBg, color: chartTextColor, boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
                     <Line type="monotone" dataKey="value" stroke={theme.accent} strokeWidth={3} dot={{r: 4, fill: theme.accent}} activeDot={{r: 6}} />
                   </LineChart>
                 </ResponsiveContainer>
@@ -502,11 +524,11 @@ function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }
               return (
                 <ResponsiveContainer width="100%" height="100%">
                   <RadarChart cx="50%" cy="50%" outerRadius="80%" data={data}>
-                    <PolarGrid stroke={theme.text + '20'} />
-                    <PolarAngleAxis dataKey="name" tick={{fill: theme.text}} />
-                    <PolarRadiusAxis angle={30} domain={[0, 'auto']} tick={{fill: theme.text}} />
+                    <PolarGrid stroke={chartTextColor + '20'} />
+                    <PolarAngleAxis dataKey="name" tick={{fill: chartTextColor}} />
+                    <PolarRadiusAxis angle={30} domain={[0, 'auto']} tick={{fill: chartTextColor}} />
                     <Radar name="Value" dataKey="value" stroke={theme.accent} fill={theme.accent} fillOpacity={0.5} />
-                    <Tooltip contentStyle={{borderRadius: '8px', border: 'none', backgroundColor: theme.bg, color: theme.text, boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                    <Tooltip contentStyle={{borderRadius: '8px', border: 'none', backgroundColor: chartBg, color: chartTextColor, boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
                   </RadarChart>
                 </ResponsiveContainer>
               );
@@ -514,10 +536,10 @@ function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }
               return (
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme.text + '20'} />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: theme.text}} />
-                    <YAxis axisLine={false} tickLine={false} tick={{fill: theme.text}} />
-                    <Tooltip cursor={{fill: theme.text + '10'}} contentStyle={{borderRadius: '8px', border: 'none', backgroundColor: theme.bg, color: theme.text, boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartTextColor + '20'} />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: chartTextColor}} />
+                    <YAxis axisLine={false} tickLine={false} tick={{fill: chartTextColor}} />
+                    <Tooltip cursor={{fill: chartTextColor + '10'}} contentStyle={{borderRadius: '8px', border: 'none', backgroundColor: chartBg, color: chartTextColor, boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
                     <Area type="monotone" dataKey="value" stroke={theme.accent} fill={theme.accent} fillOpacity={0.3} />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -527,10 +549,10 @@ function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }
               return (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme.text + '20'} />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: theme.text}} />
-                    <YAxis axisLine={false} tickLine={false} tick={{fill: theme.text}} />
-                    <Tooltip cursor={{fill: theme.text + '10'}} contentStyle={{borderRadius: '8px', border: 'none', backgroundColor: theme.bg, color: theme.text, boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartTextColor + '20'} />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: chartTextColor}} />
+                    <YAxis axisLine={false} tickLine={false} tick={{fill: chartTextColor}} />
+                    <Tooltip cursor={{fill: chartTextColor + '10'}} contentStyle={{borderRadius: '8px', border: 'none', backgroundColor: chartBg, color: chartTextColor, boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
                     <Bar dataKey="value" fill={theme.accent} radius={[4, 4, 0, 0]} maxBarSize={60}>
                       {data?.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={theme.accent} opacity={1 - (index * 0.15)} />
@@ -543,24 +565,27 @@ function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }
         };
 
         return (
-          <div className="flex flex-col h-full p-8" style={{ backgroundColor: theme.bg }}>
-            <h2 className="text-3xl font-bold mb-8 pb-4 border-b-2" style={{ color: theme.title, borderColor: theme.accent + '40' }}>{title}</h2>
-            <div className="flex flex-1 gap-8">
-              <div className="flex-1 flex flex-col justify-center">
-                <ul className="text-lg space-y-4" style={{ color: theme.text }}>
+          <div className="flex flex-col h-full p-10" style={{ backgroundColor: theme.bg }}>
+            <div className="flex items-center gap-6 mb-8">
+              <div className="w-3 h-12 rounded-full" style={{ backgroundColor: theme.accent }}></div>
+              <h2 className="text-4xl font-bold tracking-tight" style={{ color: theme.title }}>{title}</h2>
+            </div>
+            <div className="flex flex-1 gap-10">
+              <div className="w-5/12 flex flex-col justify-center">
+                <ul className="text-xl space-y-6" style={{ color: theme.text }}>
                   {contentArray.map((c, i) => (
-                    <li key={i} className="flex items-start gap-3">
-                      <span className="mt-1" style={{ color: theme.accent }}>•</span>
+                    <li key={i} className="flex items-start gap-4 p-4 rounded-xl" style={{ backgroundColor: theme.accentBg + '40' }}>
+                      <span className="mt-2 w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: theme.accent }}></span>
                       <span className="leading-relaxed">{c}</span>
                     </li>
                   ))}
                 </ul>
               </div>
-              <div className="flex-1 flex items-center justify-center rounded-xl shadow-sm border p-6" style={{ backgroundColor: theme.bg === '#171717' ? '#262626' : '#FFFFFF', borderColor: theme.accent + '20' }}>
+              <div className="w-7/12 flex items-center justify-center rounded-3xl shadow-lg border p-8" style={{ backgroundColor: chartBg, borderColor: theme.accent + '20' }}>
                 {hasData ? renderChart() : (
-                  <div className="flex flex-col items-center" style={{ color: theme.text + '80' }}>
-                    <Loader2 className="w-8 h-8 mb-2 opacity-50" />
-                    <p>No chart data available</p>
+                  <div className="flex flex-col items-center" style={{ color: chartTextColor + '80' }}>
+                    <Loader2 className="w-10 h-10 mb-3 opacity-50" />
+                    <p className="text-lg">No chart data available</p>
                   </div>
                 )}
               </div>
@@ -569,16 +594,21 @@ function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }
         );
       default:
         return (
-          <div className="flex flex-col h-full p-8" style={{ backgroundColor: theme.bg }}>
-            <h2 className="text-3xl font-bold mb-8 pb-4 border-b-2" style={{ color: theme.title, borderColor: theme.accent + '40' }}>{title}</h2>
-            <ul className="text-xl space-y-5 flex-1" style={{ color: theme.text }}>
+          <div className="flex flex-col h-full p-12 relative" style={{ backgroundColor: theme.bg }}>
+            <div className="absolute top-0 left-0 w-2 h-full" style={{ backgroundColor: theme.accent }}></div>
+            <div className="mb-10 pl-6">
+              <h2 className="text-4xl font-bold tracking-tight" style={{ color: theme.title }}>{title}</h2>
+            </div>
+            <div className="flex-1 pl-6 grid grid-cols-1 gap-6 content-start">
               {contentArray.map((c, i) => (
-                <li key={i} className="flex items-start gap-4">
-                  <span className="mt-1 text-lg" style={{ color: theme.accent }}>✦</span>
-                  <span className="leading-relaxed">{c}</span>
-                </li>
+                <div key={i} className="flex items-start gap-5 p-6 rounded-2xl shadow-sm border border-black/5" style={{ backgroundColor: theme.bg === '#0F172A' ? '#1E293B' : '#FFFFFF' }}>
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold" style={{ backgroundColor: theme.accentBg, color: theme.accent }}>
+                    {i + 1}
+                  </div>
+                  <p className="text-xl leading-relaxed pt-1" style={{ color: theme.text }}>{c}</p>
+                </div>
               ))}
-            </ul>
+            </div>
           </div>
         );
     }
