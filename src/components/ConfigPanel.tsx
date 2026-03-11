@@ -16,6 +16,46 @@ export function ConfigPanel({ config, setConfig }: ConfigPanelProps) {
       <h2 className="text-lg font-semibold">Settings</h2>
       
       <div className="space-y-4">
+        <div className="pt-4 border-t border-neutral-200">
+          <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider mb-4">Page Layout</h3>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1">Orientation</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => handleChange('orientation', 'landscape')}
+                  className={`px-3 py-2 text-sm font-medium rounded-md border transition-colors ${config.orientation !== 'portrait' ? "bg-indigo-50 border-indigo-200 text-indigo-700" : "bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50"}`}
+                >
+                  Landscape
+                </button>
+                <button
+                  onClick={() => handleChange('orientation', 'portrait')}
+                  className={`px-3 py-2 text-sm font-medium rounded-md border transition-colors ${config.orientation === 'portrait' ? "bg-indigo-50 border-indigo-200 text-indigo-700" : "bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50"}`}
+                >
+                  Portrait
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1">Page Size</label>
+              <select
+                value={config.pageSize || 'web'}
+                onChange={(e) => handleChange('pageSize', e.target.value)}
+                className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              >
+                <option value="web">Web (1920×1080)</option>
+                <option value="a4">A4 (Fixed 20mm margin)</option>
+                <option value="b5">B5 (Fixed 20mm margin)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-4 border-t border-neutral-200">
+          <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider mb-4">API Settings</h3>
+        </div>
+
         <div>
           <label className="block text-sm font-medium text-neutral-700 mb-1">Gemini API Key</label>
           <input 

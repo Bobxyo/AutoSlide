@@ -122,7 +122,7 @@ export default function App() {
     setLoading(true);
     setLoadingMsg('Exporting to PPTX...');
     try {
-      await exportToPPTX(presentation);
+      await exportToPPTX(presentation, 'modern', config);
     } catch (e) {
       console.error(e);
       alert('Error exporting presentation.');

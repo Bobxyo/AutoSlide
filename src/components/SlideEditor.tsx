@@ -137,7 +137,7 @@ export function SlideEditor({ presentation, setPresentation, config }: SlideEdit
   const handleExport = async () => {
     setExporting(true);
     try {
-      await exportToPPTX(presentation, selectedTheme);
+      await exportToPPTX(presentation, selectedTheme, config);
     } catch (e) {
       console.error(e);
       alert('Error exporting presentation.');
@@ -290,16 +290,33 @@ export function SlideEditor({ presentation, setPresentation, config }: SlideEdit
   );
 }
 
+function getLayoutConfig(config: AppConfig) {
+  const isPortrait = config.orientation === 'portrait';
+  let w = 1024, h = 576, margin = 48;
+  
+  if (config.pageSize === 'a4') {
+    w = 1122; h = 794; margin = 76;
+  } else if (config.pageSize === 'b5') {
+    w = 945; h = 665; margin = 76;
+  }
+  
+  if (isPortrait) {
+    return { w: h, h: w, margin, isPortrait };
+  }
+  return { w, h, margin, isPortrait };
+}
+
 function ScaledSlide({ slide, updateSlide, config, themeId, interactive = true }: { slide: Slide, updateSlide?: (s: Slide) => void, config: AppConfig, themeId: string, interactive?: boolean }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
+  const layoutConfig = getLayoutConfig(config);
 
   useEffect(() => {
     const observer = new ResizeObserver((entries) => {
       for (let entry of entries) {
         const { width, height } = entry.contentRect;
-        const scaleX = width / 1024;
-        const scaleY = height / 576;
+        const scaleX = width / layoutConfig.w;
+        const scaleY = height / layoutConfig.h;
         setScale(Math.min(scaleX, scaleY));
       }
     });
@@ -309,14 +326,14 @@ function ScaledSlide({ slide, updateSlide, config, themeId, interactive = true }
     }
 
     return () => observer.disconnect();
-  }, []);
+  }, [layoutConfig.w, layoutConfig.h]);
 
   return (
     <div ref={containerRef} className="w-full h-full relative overflow-hidden">
       <div 
         style={{ 
-          width: '1024px', 
-          height: '576px', 
+          width: `${layoutConfig.w}px`, 
+          height: `${layoutConfig.h}px`, 
           transform: `translate(-50%, -50%) scale(${scale})`,
           position: 'absolute',
           left: '50%',
@@ -342,6 +359,8 @@ function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }
     creative: { bg: '#FFF1F2', title: '#881337', text: '#701A75', accent: '#E11D48', accentBg: '#FFE4E6' }
   };
   const theme = themes[themeId] || themes.modern;
+  const layoutConfig = getLayoutConfig(config);
+  const { isPortrait, margin } = layoutConfig;
 
   const handleGenerateImage = async (customPrompt?: string) => {
     const promptToUse = customPrompt || slide.imagePlaceholder?.suggestedPrompt;
@@ -385,7 +404,7 @@ function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }
     switch (slide.layout) {
       case 'title':
         return (
-          <div className="flex flex-col items-center justify-center h-full text-center p-16 relative overflow-hidden" style={{ backgroundColor: theme.bg }}>
+          <div className="flex flex-col items-center justify-center h-full text-center relative overflow-hidden" style={{ backgroundColor: theme.bg, padding: margin }}>
             {/* Decorative background elements */}
             <div className="absolute top-0 left-0 w-full h-2" style={{ backgroundColor: theme.accent }}></div>
             <div className="absolute -top-24 -right-24 w-64 h-64 rounded-full opacity-20" style={{ backgroundColor: theme.accent }}></div>
@@ -402,7 +421,7 @@ function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }
         );
       case 'content':
         return (
-          <div className="flex flex-col h-full p-12 relative" style={{ backgroundColor: theme.bg }}>
+          <div className="flex flex-col h-full relative" style={{ backgroundColor: theme.bg, padding: margin }}>
             <div className="absolute top-0 left-0 w-2 h-full" style={{ backgroundColor: theme.accent }}></div>
             <div className="mb-10 pl-6">
               <h2 className="text-4xl font-bold tracking-tight" style={{ color: theme.title }}>{title}</h2>
@@ -421,10 +440,10 @@ function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }
         );
       case 'image-right':
         return (
-          <div className="flex h-full" style={{ backgroundColor: theme.bg }}>
-            <div className="w-1/2 p-12 flex flex-col justify-center relative">
-              <div className="absolute top-12 left-12 w-12 h-1.5 rounded-full" style={{ backgroundColor: theme.accent }}></div>
-              <h2 className="text-4xl font-bold mb-10 mt-8 leading-tight" style={{ color: theme.title }}>{title}</h2>
+          <div className={`flex ${isPortrait ? 'flex-col' : 'flex-row'} h-full`} style={{ backgroundColor: theme.bg, padding: margin }}>
+            <div className={`${isPortrait ? 'w-full h-1/2 pb-6' : 'w-1/2 pr-12'} flex flex-col justify-center relative`}>
+              <div className={`absolute ${isPortrait ? 'top-0 left-0' : 'top-12 left-0'} w-12 h-1.5 rounded-full`} style={{ backgroundColor: theme.accent }}></div>
+              <h2 className={`text-4xl font-bold mb-10 ${isPortrait ? 'mt-4' : 'mt-8'} leading-tight`} style={{ color: theme.title }}>{title}</h2>
               <ul className="text-xl space-y-6 flex-1">
                 {contentArray.map((c, i) => (
                   <li key={i} className="flex items-start gap-4">
@@ -434,7 +453,7 @@ function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }
                 ))}
               </ul>
             </div>
-            <div className="w-1/2 p-6">
+            <div className={`${isPortrait ? 'w-full h-1/2 pt-6' : 'w-1/2 pl-6'}`}>
               <div className="w-full h-full rounded-3xl overflow-hidden shadow-2xl relative">
                 <ImagePlaceholder 
                   placeholder={slide.imagePlaceholder} 
@@ -449,8 +468,8 @@ function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }
         );
       case 'image-left':
         return (
-          <div className="flex h-full" style={{ backgroundColor: theme.bg }}>
-            <div className="w-1/2 p-6">
+          <div className={`flex ${isPortrait ? 'flex-col' : 'flex-row'} h-full`} style={{ backgroundColor: theme.bg, padding: margin }}>
+            <div className={`${isPortrait ? 'w-full h-1/2 pb-6' : 'w-1/2 pr-6'}`}>
               <div className="w-full h-full rounded-3xl overflow-hidden shadow-2xl relative">
                 <ImagePlaceholder 
                   placeholder={slide.imagePlaceholder} 
@@ -461,9 +480,9 @@ function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }
                 />
               </div>
             </div>
-            <div className="w-1/2 p-12 flex flex-col justify-center relative">
-              <div className="absolute top-12 left-12 w-12 h-1.5 rounded-full" style={{ backgroundColor: theme.accent }}></div>
-              <h2 className="text-4xl font-bold mb-10 mt-8 leading-tight" style={{ color: theme.title }}>{title}</h2>
+            <div className={`${isPortrait ? 'w-full h-1/2 pt-6' : 'w-1/2 pl-12'} flex flex-col justify-center relative`}>
+              <div className={`absolute ${isPortrait ? 'top-6 left-12' : 'top-12 left-12'} w-12 h-1.5 rounded-full`} style={{ backgroundColor: theme.accent }}></div>
+              <h2 className={`text-4xl font-bold mb-10 ${isPortrait ? 'mt-4' : 'mt-8'} leading-tight`} style={{ color: theme.title }}>{title}</h2>
               <ul className="text-xl space-y-6 flex-1">
                 {contentArray.map((c, i) => (
                   <li key={i} className="flex items-start gap-4">
@@ -477,7 +496,7 @@ function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }
         );
       case 'quote':
         return (
-          <div className="flex flex-col items-center justify-center h-full text-center px-32 relative overflow-hidden" style={{ backgroundColor: theme.accent }}>
+          <div className="flex flex-col items-center justify-center h-full text-center relative overflow-hidden" style={{ backgroundColor: theme.accent, padding: margin }}>
             <div className="absolute top-0 left-0 w-full h-full opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '32px 32px' }}></div>
             <div className="absolute -top-10 -left-10 text-[200px] font-serif leading-none opacity-20 text-white">"</div>
             <h2 className="text-2xl font-bold mb-12 uppercase tracking-[0.3em] text-white/80 relative z-10">{title}</h2>
@@ -565,13 +584,13 @@ function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }
         };
 
         return (
-          <div className="flex flex-col h-full p-10" style={{ backgroundColor: theme.bg }}>
+          <div className="flex flex-col h-full" style={{ backgroundColor: theme.bg, padding: margin }}>
             <div className="flex items-center gap-6 mb-8">
               <div className="w-3 h-12 rounded-full" style={{ backgroundColor: theme.accent }}></div>
               <h2 className="text-4xl font-bold tracking-tight" style={{ color: theme.title }}>{title}</h2>
             </div>
-            <div className="flex flex-1 gap-10">
-              <div className="w-5/12 flex flex-col justify-center">
+            <div className={`flex flex-1 ${isPortrait ? 'flex-col gap-6' : 'gap-10'}`}>
+              <div className={`${isPortrait ? 'w-full h-2/5' : 'w-5/12'} flex flex-col justify-center`}>
                 <ul className="text-xl space-y-6" style={{ color: theme.text }}>
                   {contentArray.map((c, i) => (
                     <li key={i} className="flex items-start gap-4 p-4 rounded-xl" style={{ backgroundColor: theme.accentBg + '40' }}>
@@ -581,7 +600,7 @@ function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }
                   ))}
                 </ul>
               </div>
-              <div className="w-7/12 flex items-center justify-center rounded-3xl shadow-lg border p-8" style={{ backgroundColor: chartBg, borderColor: theme.accent + '20' }}>
+              <div className={`${isPortrait ? 'w-full h-3/5' : 'w-7/12'} flex items-center justify-center rounded-3xl shadow-lg border p-8`} style={{ backgroundColor: chartBg, borderColor: theme.accent + '20' }}>
                 {hasData ? renderChart() : (
                   <div className="flex flex-col items-center" style={{ color: chartTextColor + '80' }}>
                     <Loader2 className="w-10 h-10 mb-3 opacity-50" />
@@ -594,7 +613,7 @@ function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }
         );
       default:
         return (
-          <div className="flex flex-col h-full p-12 relative" style={{ backgroundColor: theme.bg }}>
+          <div className="flex flex-col h-full relative" style={{ backgroundColor: theme.bg, padding: margin }}>
             <div className="absolute top-0 left-0 w-2 h-full" style={{ backgroundColor: theme.accent }}></div>
             <div className="mb-10 pl-6">
               <h2 className="text-4xl font-bold tracking-tight" style={{ color: theme.title }}>{title}</h2>

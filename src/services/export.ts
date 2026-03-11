@@ -1,9 +1,32 @@
 import pptxgen from "pptxgenjs";
-import { Presentation } from "../types";
+import { Presentation, AppConfig } from "../types";
 
-export async function exportToPPTX(presentation: Presentation, themeId: string = 'modern') {
+export async function exportToPPTX(presentation: Presentation, themeId: string = 'modern', config?: AppConfig) {
   let pptx = new pptxgen();
-  pptx.layout = 'LAYOUT_16x9';
+  
+  let slideW = 10;
+  let slideH = 5.625;
+  let margin = 0.5;
+
+  if (config?.pageSize === 'a4') {
+    slideW = 11.69; 
+    slideH = 8.27; 
+    margin = 20 / 25.4; // 20mm in inches
+  } else if (config?.pageSize === 'b5') {
+    slideW = 9.84; 
+    slideH = 6.93; 
+    margin = 20 / 25.4; // 20mm in inches
+  }
+
+  const isPortrait = config?.orientation === 'portrait';
+  if (isPortrait) {
+    const temp = slideW; 
+    slideW = slideH; 
+    slideH = temp;
+  }
+
+  pptx.defineLayout({ name: 'CUSTOM_LAYOUT', width: slideW, height: slideH });
+  pptx.layout = 'CUSTOM_LAYOUT';
 
   const themes: Record<string, any> = {
     modern: { bg: 'FFFFFF', title: '312E81', text: '4B5563', accent: '4F46E5', font: 'Arial' },
@@ -14,13 +37,22 @@ export async function exportToPPTX(presentation: Presentation, themeId: string =
 
   const theme = themes[themeId] || themes.modern;
 
+  const contentW = slideW - margin * 2;
+  const contentH = slideH - margin * 2;
+  const titleH = 0.8;
+  const bodyY = margin + titleH + 0.2;
+  const bodyH = slideH - bodyY - margin;
+
+  let halfW = (contentW - 0.4) / 2;
+  let halfH = (bodyH - 0.4) / 2;
+
   // Define Slide Masters for native placeholders and proper layouts
   pptx.defineSlideMaster({
     title: 'TITLE_SLIDE',
     background: { color: theme.bg },
     objects: [
-      { placeholder: { options: { name: 'title', type: 'title', x: 0.5, y: 1.8, w: 9.0, h: 1.0, align: 'center', valign: 'middle', fontSize: 44, color: theme.title, fontFace: theme.font, bold: true } } },
-      { placeholder: { options: { name: 'body', type: 'body', x: 0.5, y: 3.0, w: 9.0, h: 1.0, align: 'center', valign: 'top', fontSize: 24, color: theme.text, fontFace: theme.font } } }
+      { placeholder: { options: { name: 'title', type: 'title', x: margin, y: slideH * 0.3, w: contentW, h: slideH * 0.2, align: 'center', valign: 'middle', fontSize: 44, color: theme.title, fontFace: theme.font, bold: true } } },
+      { placeholder: { options: { name: 'body', type: 'body', x: margin, y: slideH * 0.5, w: contentW, h: slideH * 0.3, align: 'center', valign: 'top', fontSize: 24, color: theme.text, fontFace: theme.font } } }
     ]
   });
 
@@ -28,8 +60,8 @@ export async function exportToPPTX(presentation: Presentation, themeId: string =
     title: 'CONTENT_SLIDE',
     background: { color: theme.bg },
     objects: [
-      { placeholder: { options: { name: 'title', type: 'title', x: 0.5, y: 0.3, w: 9.0, h: 0.8, valign: 'middle', fontSize: 36, color: theme.title, fontFace: theme.font, bold: true } } },
-      { placeholder: { options: { name: 'body', type: 'body', x: 0.5, y: 1.3, w: 9.0, h: 4.0, valign: 'top', fontSize: 20, color: theme.text, fontFace: theme.font } } }
+      { placeholder: { options: { name: 'title', type: 'title', x: margin, y: margin, w: contentW, h: titleH, valign: 'middle', fontSize: 36, color: theme.title, fontFace: theme.font, bold: true } } },
+      { placeholder: { options: { name: 'body', type: 'body', x: margin, y: bodyY, w: contentW, h: bodyH, valign: 'top', fontSize: 20, color: theme.text, fontFace: theme.font } } }
     ]
   });
 
@@ -37,8 +69,13 @@ export async function exportToPPTX(presentation: Presentation, themeId: string =
     title: 'TWO_COLUMN_LEFT_BODY',
     background: { color: theme.bg },
     objects: [
-      { placeholder: { options: { name: 'title', type: 'title', x: 0.5, y: 0.3, w: 9.0, h: 0.8, valign: 'middle', fontSize: 36, color: theme.title, fontFace: theme.font, bold: true } } },
-      { placeholder: { options: { name: 'body', type: 'body', x: 0.5, y: 1.3, w: 4.2, h: 4.0, valign: 'top', fontSize: 20, color: theme.text, fontFace: theme.font } } }
+      { placeholder: { options: { name: 'title', type: 'title', x: margin, y: margin, w: contentW, h: titleH, valign: 'middle', fontSize: 36, color: theme.title, fontFace: theme.font, bold: true } } },
+      { placeholder: { options: { name: 'body', type: 'body', 
+        x: margin, 
+        y: bodyY, 
+        w: isPortrait ? contentW : halfW, 
+        h: isPortrait ? halfH : bodyH, 
+        valign: 'top', fontSize: 20, color: theme.text, fontFace: theme.font } } }
     ]
   });
 
@@ -46,8 +83,13 @@ export async function exportToPPTX(presentation: Presentation, themeId: string =
     title: 'TWO_COLUMN_RIGHT_BODY',
     background: { color: theme.bg },
     objects: [
-      { placeholder: { options: { name: 'title', type: 'title', x: 0.5, y: 0.3, w: 9.0, h: 0.8, valign: 'middle', fontSize: 36, color: theme.title, fontFace: theme.font, bold: true } } },
-      { placeholder: { options: { name: 'body', type: 'body', x: 5.3, y: 1.3, w: 4.2, h: 4.0, valign: 'top', fontSize: 20, color: theme.text, fontFace: theme.font } } }
+      { placeholder: { options: { name: 'title', type: 'title', x: margin, y: margin, w: contentW, h: titleH, valign: 'middle', fontSize: 36, color: theme.title, fontFace: theme.font, bold: true } } },
+      { placeholder: { options: { name: 'body', type: 'body', 
+        x: isPortrait ? margin : margin + halfW + 0.4, 
+        y: isPortrait ? bodyY + halfH + 0.4 : bodyY, 
+        w: isPortrait ? contentW : halfW, 
+        h: isPortrait ? halfH : bodyH, 
+        valign: 'top', fontSize: 20, color: theme.text, fontFace: theme.font } } }
     ]
   });
 
@@ -55,7 +97,7 @@ export async function exportToPPTX(presentation: Presentation, themeId: string =
     title: 'QUOTE_SLIDE',
     background: { color: theme.bg },
     objects: [
-      { placeholder: { options: { name: 'body', type: 'body', x: 1.0, y: 1.3, w: 8.0, h: 3.0, align: 'center', valign: 'middle', fontSize: 32, italic: true, color: theme.text, fontFace: 'Georgia' } } }
+      { placeholder: { options: { name: 'body', type: 'body', x: margin, y: margin, w: contentW, h: contentH, align: 'center', valign: 'middle', fontSize: 32, italic: true, color: theme.text, fontFace: 'Georgia' } } }
     ]
   });
 
@@ -81,24 +123,39 @@ export async function exportToPPTX(presentation: Presentation, themeId: string =
       if (slide.layout === 'content') {
         slidePpt.addText(slide.content.map(c => ({ text: c, options: { bullet: true } })), { placeholder: 'body' });
       } else if (slide.layout === 'image-right') {
+        let imgX = isPortrait ? margin : margin + halfW + 0.4;
+        let imgY = isPortrait ? bodyY + halfH + 0.4 : bodyY;
+        let imgW = isPortrait ? contentW : halfW;
+        let imgH = isPortrait ? halfH : bodyH;
+
         slidePpt.addText(slide.content.map(c => ({ text: c, options: { bullet: true } })), { placeholder: 'body' });
         if (slide.imagePlaceholder?.url) {
-          slidePpt.addImage({ data: slide.imagePlaceholder.url, x: 5.3, y: 1.3, w: 4.2, h: 4.0, sizing: { type: 'contain', w: 4.2, h: 4.0 } });
+          slidePpt.addImage({ data: slide.imagePlaceholder.url, x: imgX, y: imgY, w: imgW, h: imgH, sizing: { type: 'contain', w: imgW, h: imgH } });
         } else {
-          slidePpt.addShape(pptx.ShapeType.rect, { x: 5.3, y: 1.3, w: 4.2, h: 4.0, fill: { color: theme.accent } });
-          slidePpt.addText('Image Placeholder', { x: 5.3, y: 1.3, w: 4.2, h: 4.0, align: 'center', color: theme.bg });
+          slidePpt.addShape(pptx.ShapeType.rect, { x: imgX, y: imgY, w: imgW, h: imgH, fill: { color: theme.accent } });
+          slidePpt.addText('Image Placeholder', { x: imgX, y: imgY, w: imgW, h: imgH, align: 'center', color: theme.bg });
         }
       } else if (slide.layout === 'image-left') {
+        let imgX = margin;
+        let imgY = bodyY;
+        let imgW = isPortrait ? contentW : halfW;
+        let imgH = isPortrait ? halfH : bodyH;
+
         if (slide.imagePlaceholder?.url) {
-          slidePpt.addImage({ data: slide.imagePlaceholder.url, x: 0.5, y: 1.3, w: 4.2, h: 4.0, sizing: { type: 'contain', w: 4.2, h: 4.0 } });
+          slidePpt.addImage({ data: slide.imagePlaceholder.url, x: imgX, y: imgY, w: imgW, h: imgH, sizing: { type: 'contain', w: imgW, h: imgH } });
         } else {
-          slidePpt.addShape(pptx.ShapeType.rect, { x: 0.5, y: 1.3, w: 4.2, h: 4.0, fill: { color: theme.accent } });
-          slidePpt.addText('Image Placeholder', { x: 0.5, y: 1.3, w: 4.2, h: 4.0, align: 'center', color: theme.bg });
+          slidePpt.addShape(pptx.ShapeType.rect, { x: imgX, y: imgY, w: imgW, h: imgH, fill: { color: theme.accent } });
+          slidePpt.addText('Image Placeholder', { x: imgX, y: imgY, w: imgW, h: imgH, align: 'center', color: theme.bg });
         }
         slidePpt.addText(slide.content.map(c => ({ text: c, options: { bullet: true } })), { placeholder: 'body' });
       } else if (slide.layout === 'quote') {
         slidePpt.addText(slide.content.join('\n'), { placeholder: 'body' });
       } else if (slide.layout === 'chart') {
+        let chartX = isPortrait ? margin : margin + halfW + 0.4;
+        let chartY = isPortrait ? bodyY + halfH + 0.4 : bodyY;
+        let chartW = isPortrait ? contentW : halfW;
+        let chartH = isPortrait ? halfH : bodyH;
+
         slidePpt.addText(slide.content.map(c => ({ text: c, options: { bullet: true } })), { placeholder: 'body' });
         if (slide.chartData && slide.chartData.length > 0) {
           const chartData = [
@@ -116,7 +173,7 @@ export async function exportToPPTX(presentation: Presentation, themeId: string =
           if (slide.chartType === 'area') pptxChartType = pptx.ChartType.area;
 
           slidePpt.addChart(pptxChartType, chartData, {
-            x: 5.3, y: 1.3, w: 4.2, h: 4.0,
+            x: chartX, y: chartY, w: chartW, h: chartH,
             barDir: 'col',
             chartColors: [theme.accent, '818CF8', 'C7D2FE', 'E0E7FF', '312E81', '4338CA'],
             showLegend: slide.chartType === 'pie',

@@ -33,6 +33,8 @@ export interface AppConfig {
   imageSteps: number;
   imageGuidance: number;
   googleClientId?: string;
+  orientation?: 'landscape' | 'portrait';
+  pageSize?: 'web' | 'a4' | 'b5';
 }
 
 export interface HistoryTask {

@@ -43,8 +43,15 @@ export async function generatePresentation(
   report: string,
   config: AppConfig
 ): Promise<Presentation> {
+  const isPortrait = config.orientation === 'portrait';
+  const layoutContext = isPortrait 
+    ? "The presentation will be displayed in PORTRAIT orientation (vertical). Keep text concise and use vertical-friendly layouts."
+    : "The presentation will be displayed in LANDSCAPE orientation (horizontal).";
+
   const prompt = `Based on the following research report, generate a highly professional, visually appealing presentation. 
 CRITICAL LANGUAGE REQUIREMENT: First, detect the language of the provided Report. ALL generated content (title, content, speakerNotes) MUST be in the EXACT SAME LANGUAGE as the Report. Do NOT translate. If the report is in English, output English. If the report is in Chinese, output Chinese.
+
+LAYOUT CONTEXT: ${layoutContext}
 
 Extract the key points into slides. 
 For each slide, provide:
