@@ -44,6 +44,8 @@ export async function generatePresentation(
   config: AppConfig
 ): Promise<Presentation> {
   const prompt = `Based on the following research report, generate a highly professional, visually appealing presentation. 
+CRITICAL LANGUAGE REQUIREMENT: First, detect the language of the provided Report. ALL generated content (title, content, speakerNotes) MUST be in the EXACT SAME LANGUAGE as the Report. Do NOT translate. If the report is in English, output English. If the report is in Chinese, output Chinese.
+
 Extract the key points into slides. 
 For each slide, provide:
 - A compelling 'title'
@@ -52,7 +54,7 @@ For each slide, provide:
 - 'chartType': If layout is 'chart', choose the best type from: 'bar', 'line', 'pie', 'radar', 'area'.
 - 'imagePlaceholder': If layout is 'image-right' or 'image-left', provide a highly descriptive 'suggestedPrompt' for an AI image generator.
 - 'chartData': If layout is 'chart', provide an array of objects with 'name' and 'value' properties representing data from the report.
-- 'speakerNotes': MUST be a highly detailed, verbatim speech script (逐字稿). It should be long enough to cover 1-2 minutes of speaking per slide, explaining the concepts in detail as if presenting to a live audience without any prior preparation. Include transitions between slides.
+- 'speakerNotes': MUST be a highly detailed, verbatim speech script. It should be long enough to cover 1-2 minutes of speaking per slide, explaining the concepts in detail as if presenting to a live audience without any prior preparation. Include transitions between slides. Ensure this is in the EXACT SAME LANGUAGE as the report.
 
 Report:
 ${report}`;

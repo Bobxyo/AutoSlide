@@ -14,48 +14,92 @@ export async function exportToPPTX(presentation: Presentation, themeId: string =
 
   const theme = themes[themeId] || themes.modern;
 
+  // Define Slide Masters for native placeholders and proper layouts
+  pptx.defineSlideMaster({
+    title: 'TITLE_SLIDE',
+    background: { color: theme.bg },
+    objects: [
+      { placeholder: { options: { name: 'title', type: 'title', x: '5%', y: '30%', w: '90%', h: '20%', align: 'center', valign: 'middle', fontSize: 44, color: theme.title, fontFace: theme.font, bold: true } } },
+      { placeholder: { options: { name: 'body', type: 'body', x: '5%', y: '50%', w: '90%', h: '30%', align: 'center', valign: 'top', fontSize: 24, color: theme.text, fontFace: theme.font } } }
+    ]
+  });
+
+  pptx.defineSlideMaster({
+    title: 'CONTENT_SLIDE',
+    background: { color: theme.bg },
+    objects: [
+      { placeholder: { options: { name: 'title', type: 'title', x: '5%', y: '5%', w: '90%', h: '15%', valign: 'middle', fontSize: 36, color: theme.title, fontFace: theme.font, bold: true } } },
+      { placeholder: { options: { name: 'body', type: 'body', x: '5%', y: '20%', w: '90%', h: '75%', valign: 'top', fontSize: 20, color: theme.text, fontFace: theme.font } } }
+    ]
+  });
+
+  pptx.defineSlideMaster({
+    title: 'TWO_COLUMN_LEFT_BODY',
+    background: { color: theme.bg },
+    objects: [
+      { placeholder: { options: { name: 'title', type: 'title', x: '5%', y: '5%', w: '90%', h: '15%', valign: 'middle', fontSize: 36, color: theme.title, fontFace: theme.font, bold: true } } },
+      { placeholder: { options: { name: 'body', type: 'body', x: '5%', y: '20%', w: '42%', h: '75%', valign: 'top', fontSize: 20, color: theme.text, fontFace: theme.font } } }
+    ]
+  });
+
+  pptx.defineSlideMaster({
+    title: 'TWO_COLUMN_RIGHT_BODY',
+    background: { color: theme.bg },
+    objects: [
+      { placeholder: { options: { name: 'title', type: 'title', x: '5%', y: '5%', w: '90%', h: '15%', valign: 'middle', fontSize: 36, color: theme.title, fontFace: theme.font, bold: true } } },
+      { placeholder: { options: { name: 'body', type: 'body', x: '53%', y: '20%', w: '42%', h: '75%', valign: 'top', fontSize: 20, color: theme.text, fontFace: theme.font } } }
+    ]
+  });
+
+  pptx.defineSlideMaster({
+    title: 'QUOTE_SLIDE',
+    background: { color: theme.bg },
+    objects: [
+      { placeholder: { options: { name: 'body', type: 'body', x: '10%', y: '20%', w: '80%', h: '60%', align: 'center', valign: 'middle', fontSize: 32, italic: true, color: theme.text, fontFace: 'Georgia' } } }
+    ]
+  });
+
   for (const slide of presentation.slides) {
-    let slidePpt = pptx.addSlide();
-    slidePpt.background = { color: theme.bg };
+    let masterName = 'CONTENT_SLIDE';
+    if (slide.layout === 'title') masterName = 'TITLE_SLIDE';
+    if (slide.layout === 'image-right' || slide.layout === 'chart') masterName = 'TWO_COLUMN_LEFT_BODY';
+    if (slide.layout === 'image-left') masterName = 'TWO_COLUMN_RIGHT_BODY';
+    if (slide.layout === 'quote') masterName = 'QUOTE_SLIDE';
+
+    let slidePpt = pptx.addSlide({ masterName });
     
     // Add title
     if (slide.layout === 'title') {
-      slidePpt.addText(slide.title, { placeholder: 'title', align: 'center' });
-      slidePpt.addText(slide.content.map(c => ({ text: c })), { placeholder: 'body', align: 'center' });
-    } else {
       slidePpt.addText(slide.title, { placeholder: 'title' });
+      slidePpt.addText(slide.content.map(c => ({ text: c })), { placeholder: 'body' });
+    } else {
+      if (slide.layout !== 'quote') {
+        slidePpt.addText(slide.title, { placeholder: 'title' });
+      }
 
       // Add content based on layout
       if (slide.layout === 'content') {
         slidePpt.addText(slide.content.map(c => ({ text: c, options: { bullet: true } })), { placeholder: 'body' });
       } else if (slide.layout === 'image-right') {
-        slidePpt.addText(slide.content.map(c => ({ text: c, options: { bullet: true } })), { 
-          placeholder: 'body', w: '45%' 
-        });
+        slidePpt.addText(slide.content.map(c => ({ text: c, options: { bullet: true } })), { placeholder: 'body' });
         if (slide.imagePlaceholder?.url) {
-          slidePpt.addImage({ data: slide.imagePlaceholder.url, x: '50%', y: '20%', w: '45%', h: '60%', sizing: { type: 'contain', w: '45%', h: '60%' } });
+          slidePpt.addImage({ data: slide.imagePlaceholder.url, x: '53%', y: '20%', w: '42%', h: '75%', sizing: { type: 'contain', w: '42%', h: '75%' } });
         } else {
-          slidePpt.addShape(pptx.ShapeType.rect, { x: '50%', y: '20%', w: '45%', h: '60%', fill: { color: theme.accent } });
-          slidePpt.addText('Image Placeholder', { x: '50%', y: '20%', w: '45%', h: '60%', align: 'center', color: theme.bg });
+          slidePpt.addShape(pptx.ShapeType.rect, { x: '53%', y: '20%', w: '42%', h: '75%', fill: { color: theme.accent } });
+          slidePpt.addText('Image Placeholder', { x: '53%', y: '20%', w: '42%', h: '75%', align: 'center', color: theme.bg });
         }
       } else if (slide.layout === 'image-left') {
         if (slide.imagePlaceholder?.url) {
-          slidePpt.addImage({ data: slide.imagePlaceholder.url, x: '5%', y: '20%', w: '45%', h: '60%', sizing: { type: 'contain', w: '45%', h: '60%' } });
+          slidePpt.addImage({ data: slide.imagePlaceholder.url, x: '5%', y: '20%', w: '42%', h: '75%', sizing: { type: 'contain', w: '42%', h: '75%' } });
         } else {
-          slidePpt.addShape(pptx.ShapeType.rect, { x: '5%', y: '20%', w: '45%', h: '60%', fill: { color: theme.accent } });
-          slidePpt.addText('Image Placeholder', { x: '5%', y: '20%', w: '45%', h: '60%', align: 'center', color: theme.bg });
+          slidePpt.addShape(pptx.ShapeType.rect, { x: '5%', y: '20%', w: '42%', h: '75%', fill: { color: theme.accent } });
+          slidePpt.addText('Image Placeholder', { x: '5%', y: '20%', w: '42%', h: '75%', align: 'center', color: theme.bg });
         }
-        slidePpt.addText(slide.content.map(c => ({ text: c, options: { bullet: true } })), { 
-          placeholder: 'body', x: '50%', w: '45%' 
-        });
+        slidePpt.addText(slide.content.map(c => ({ text: c, options: { bullet: true } })), { placeholder: 'body' });
       } else if (slide.layout === 'quote') {
-        slidePpt.addText(slide.content.join('\n'), { 
-          placeholder: 'body', align: 'center', italic: true 
-        });
+        slidePpt.addText(slide.content.join('\n'), { placeholder: 'body' });
       } else if (slide.layout === 'chart') {
-        slidePpt.addText(slide.content.map(c => ({ text: c, options: { bullet: true } })), { 
-          placeholder: 'body', w: '45%' 
-        });
+        slidePpt.addText(slide.content.map(c => ({ text: c, options: { bullet: true } })), { placeholder: 'body' });
         if (slide.chartData && slide.chartData.length > 0) {
           const chartData = [
             {
@@ -72,7 +116,7 @@ export async function exportToPPTX(presentation: Presentation, themeId: string =
           if (slide.chartType === 'area') pptxChartType = pptx.ChartType.area;
 
           slidePpt.addChart(pptxChartType, chartData, {
-            x: '50%', y: '20%', w: '45%', h: '60%',
+            x: '53%', y: '20%', w: '42%', h: '75%',
             barDir: 'col',
             chartColors: [theme.accent, '818CF8', 'C7D2FE', 'E0E7FF', '312E81', '4338CA'],
             showLegend: slide.chartType === 'pie',
