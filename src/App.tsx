@@ -9,7 +9,7 @@ import { exportToPPTX } from './services/export';
 import ReactMarkdown from 'react-markdown';
 
 const defaultConfig: AppConfig = {
-  gptResearcherEndpoint: import.meta.env.VITE_GPT_RESEARCHER_ENDPOINT || 'http://localhost:8000/report/',
+  gptResearcherEndpoint: import.meta.env.VITE_GPT_RESEARCHER_ENDPOINT || 'http://localhost:8000/api/task',
   llmProvider: 'gemini',
   openaiApiKey: import.meta.env.VITE_OPENAI_API_KEY || '',
   openaiEndpoint: import.meta.env.VITE_OPENAI_ENDPOINT || 'https://api.openai.com/v1',
@@ -32,7 +32,12 @@ export default function App() {
     const saved = localStorage.getItem('autoslide_config');
     if (saved) {
       try {
-        return { ...defaultConfig, ...JSON.parse(saved) };
+        const parsed = JSON.parse(saved);
+        // Auto-upgrade old endpoints to the correct GPT Researcher endpoint
+        if (parsed.gptResearcherEndpoint === 'http://localhost:8000/report/' || parsed.gptResearcherEndpoint === 'http://localhost:8000/api/research') {
+          parsed.gptResearcherEndpoint = 'http://localhost:8000/api/task';
+        }
+        return { ...defaultConfig, ...parsed };
       } catch (e) {
         console.error('Failed to parse saved config', e);
       }

@@ -22,7 +22,7 @@ export function ConfigPanel({ config, setConfig }: ConfigPanelProps) {
             type="text" 
             value={config.gptResearcherEndpoint}
             onChange={(e) => handleChange('gptResearcherEndpoint', e.target.value)}
-            placeholder="http://localhost:8000/report/"
+            placeholder="http://localhost:8000/api/task"
             className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
           />
           <p className="text-xs text-neutral-500 mt-1">Leave empty to use Gemini for research.</p>
