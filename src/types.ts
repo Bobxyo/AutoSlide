@@ -3,6 +3,7 @@ export interface Slide {
   title: string;
   content: string[];
   layout: 'title' | 'content' | 'image-right' | 'image-left' | 'quote' | 'chart';
+  chartType?: 'bar' | 'line' | 'pie' | 'radar' | 'area';
   imagePlaceholder?: {
     suggestedPrompt: string;
     url?: string;
@@ -17,6 +18,7 @@ export interface Presentation {
 }
 
 export interface AppConfig {
+  geminiApiKey?: string;
   gptResearcherEndpoint: string;
   llmProvider: 'gemini' | 'openai';
   openaiApiKey: string;

@@ -20,57 +20,41 @@ export async function exportToPPTX(presentation: Presentation, themeId: string =
     
     // Add title
     if (slide.layout === 'title') {
-      slidePpt.addText(slide.title, { 
-        x: 0.5, y: 2.0, w: '90%', h: 1.5, 
-        fontSize: 48, bold: true, color: theme.title, fontFace: theme.font, align: 'center'
-      });
-      slidePpt.addText(slide.content.map(c => ({ text: c })), { 
-        x: 0.5, y: 3.5, w: '90%', h: 2, 
-        fontSize: 24, color: theme.text, fontFace: theme.font, align: 'center'
-      });
+      slidePpt.addText(slide.title, { placeholder: 'title', align: 'center' });
+      slidePpt.addText(slide.content.map(c => ({ text: c })), { placeholder: 'body', align: 'center' });
     } else {
-      slidePpt.addText(slide.title, { 
-        x: 0.5, y: 0.5, w: '90%', h: 1, 
-        fontSize: 32, bold: true, color: theme.title, fontFace: theme.font 
-      });
+      slidePpt.addText(slide.title, { placeholder: 'title' });
 
       // Add content based on layout
       if (slide.layout === 'content') {
-        slidePpt.addText(slide.content.map(c => ({ text: c })), { 
-          x: 0.5, y: 1.8, w: '90%', h: 5, 
-          fontSize: 18, bullet: true, color: theme.text, fontFace: theme.font 
-        });
+        slidePpt.addText(slide.content.map(c => ({ text: c, options: { bullet: true } })), { placeholder: 'body' });
       } else if (slide.layout === 'image-right') {
-        slidePpt.addText(slide.content.map(c => ({ text: c })), { 
-          x: 0.5, y: 1.8, w: '45%', h: 5, 
-          fontSize: 18, bullet: true, color: theme.text, fontFace: theme.font 
+        slidePpt.addText(slide.content.map(c => ({ text: c, options: { bullet: true } })), { 
+          placeholder: 'body', w: '45%' 
         });
         if (slide.imagePlaceholder?.url) {
-          slidePpt.addImage({ data: slide.imagePlaceholder.url, x: 5.5, y: 1.8, w: 4, h: 4, sizing: { type: 'contain', w: 4, h: 4 } });
+          slidePpt.addImage({ data: slide.imagePlaceholder.url, x: '50%', y: '20%', w: '45%', h: '60%', sizing: { type: 'contain', w: '45%', h: '60%' } });
         } else {
-          slidePpt.addShape(pptx.ShapeType.rect, { x: 5.5, y: 1.8, w: 4, h: 4, fill: { color: theme.accent } });
-          slidePpt.addText('Image Placeholder', { x: 5.5, y: 1.8, w: 4, h: 4, align: 'center', color: theme.bg });
+          slidePpt.addShape(pptx.ShapeType.rect, { x: '50%', y: '20%', w: '45%', h: '60%', fill: { color: theme.accent } });
+          slidePpt.addText('Image Placeholder', { x: '50%', y: '20%', w: '45%', h: '60%', align: 'center', color: theme.bg });
         }
       } else if (slide.layout === 'image-left') {
         if (slide.imagePlaceholder?.url) {
-          slidePpt.addImage({ data: slide.imagePlaceholder.url, x: 0.5, y: 1.8, w: 4, h: 4, sizing: { type: 'contain', w: 4, h: 4 } });
+          slidePpt.addImage({ data: slide.imagePlaceholder.url, x: '5%', y: '20%', w: '45%', h: '60%', sizing: { type: 'contain', w: '45%', h: '60%' } });
         } else {
-          slidePpt.addShape(pptx.ShapeType.rect, { x: 0.5, y: 1.8, w: 4, h: 4, fill: { color: theme.accent } });
-          slidePpt.addText('Image Placeholder', { x: 0.5, y: 1.8, w: 4, h: 4, align: 'center', color: theme.bg });
+          slidePpt.addShape(pptx.ShapeType.rect, { x: '5%', y: '20%', w: '45%', h: '60%', fill: { color: theme.accent } });
+          slidePpt.addText('Image Placeholder', { x: '5%', y: '20%', w: '45%', h: '60%', align: 'center', color: theme.bg });
         }
-        slidePpt.addText(slide.content.map(c => ({ text: c })), { 
-          x: 5.0, y: 1.8, w: '45%', h: 5, 
-          fontSize: 18, bullet: true, color: theme.text, fontFace: theme.font 
+        slidePpt.addText(slide.content.map(c => ({ text: c, options: { bullet: true } })), { 
+          placeholder: 'body', x: '50%', w: '45%' 
         });
       } else if (slide.layout === 'quote') {
         slidePpt.addText(slide.content.join('\n'), { 
-          x: 1.5, y: 2.5, w: '70%', h: 3, 
-          fontSize: 24, italic: true, color: theme.text, align: 'center', fontFace: 'Georgia' 
+          placeholder: 'body', align: 'center', italic: true 
         });
       } else if (slide.layout === 'chart') {
-        slidePpt.addText(slide.content.map(c => ({ text: c })), { 
-          x: 0.5, y: 1.8, w: '45%', h: 5, 
-          fontSize: 18, bullet: true, color: theme.text, fontFace: theme.font 
+        slidePpt.addText(slide.content.map(c => ({ text: c, options: { bullet: true } })), { 
+          placeholder: 'body', w: '45%' 
         });
         if (slide.chartData && slide.chartData.length > 0) {
           const chartData = [
@@ -80,11 +64,18 @@ export async function exportToPPTX(presentation: Presentation, themeId: string =
               values: slide.chartData.map(d => d.value)
             }
           ];
-          slidePpt.addChart(pptx.ChartType.bar, chartData, {
-            x: 5.5, y: 1.8, w: 4, h: 4,
+          
+          let pptxChartType = pptx.ChartType.bar;
+          if (slide.chartType === 'line') pptxChartType = pptx.ChartType.line;
+          if (slide.chartType === 'pie') pptxChartType = pptx.ChartType.pie;
+          if (slide.chartType === 'radar') pptxChartType = pptx.ChartType.radar;
+          if (slide.chartType === 'area') pptxChartType = pptx.ChartType.area;
+
+          slidePpt.addChart(pptxChartType, chartData, {
+            x: '50%', y: '20%', w: '45%', h: '60%',
             barDir: 'col',
-            chartColors: [theme.accent],
-            showLegend: false,
+            chartColors: [theme.accent, '818CF8', 'C7D2FE', 'E0E7FF', '312E81', '4338CA'],
+            showLegend: slide.chartType === 'pie',
             showTitle: false,
             valAxisLabelColor: theme.text,
             catAxisLabelColor: theme.text

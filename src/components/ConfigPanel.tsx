@@ -17,6 +17,18 @@ export function ConfigPanel({ config, setConfig }: ConfigPanelProps) {
       
       <div className="space-y-4">
         <div>
+          <label className="block text-sm font-medium text-neutral-700 mb-1">Gemini API Key</label>
+          <input 
+            type="password" 
+            value={config.geminiApiKey || ''}
+            onChange={(e) => handleChange('geminiApiKey', e.target.value)}
+            placeholder="AIzaSy..."
+            className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          />
+          <p className="text-xs text-neutral-500 mt-1">Required if running locally. Leave empty if using AI Studio.</p>
+        </div>
+
+        <div>
           <label className="block text-sm font-medium text-neutral-700 mb-1">GPT Researcher Endpoint</label>
           <input 
             type="text" 

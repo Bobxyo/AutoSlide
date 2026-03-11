@@ -9,6 +9,7 @@ import { exportToPPTX } from './services/export';
 import ReactMarkdown from 'react-markdown';
 
 const defaultConfig: AppConfig = {
+  geminiApiKey: import.meta.env.VITE_GEMINI_API_KEY || '',
   gptResearcherEndpoint: import.meta.env.VITE_GPT_RESEARCHER_ENDPOINT || 'http://localhost:8000/api/task',
   llmProvider: 'gemini',
   openaiApiKey: import.meta.env.VITE_OPENAI_API_KEY || '',

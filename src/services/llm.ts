@@ -49,15 +49,16 @@ For each slide, provide:
 - A compelling 'title'
 - 'content': An array of detailed bullet points (MUST NOT BE EMPTY).
 - 'layout': Choose the best layout from: 'title', 'content', 'image-right', 'image-left', 'quote', 'chart'.
+- 'chartType': If layout is 'chart', choose the best type from: 'bar', 'line', 'pie', 'radar', 'area'.
 - 'imagePlaceholder': If layout is 'image-right' or 'image-left', provide a highly descriptive 'suggestedPrompt' for an AI image generator.
 - 'chartData': If layout is 'chart', provide an array of objects with 'name' and 'value' properties representing data from the report.
-- 'speakerNotes': Detailed speaker notes.
+- 'speakerNotes': MUST be a highly detailed, verbatim speech script (逐字稿). It should be long enough to cover 1-2 minutes of speaking per slide, explaining the concepts in detail as if presenting to a live audience without any prior preparation. Include transitions between slides.
 
 Report:
 ${report}`;
 
   if (config.llmProvider === 'gemini') {
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const ai = new GoogleGenAI({ apiKey: config.geminiApiKey || process.env.GEMINI_API_KEY || import.meta.env.VITE_GEMINI_API_KEY });
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: prompt,
@@ -76,6 +77,7 @@ ${report}`;
                   title: { type: Type.STRING },
                   content: { type: Type.ARRAY, items: { type: Type.STRING } },
                   layout: { type: Type.STRING, description: "Must be one of: 'title', 'content', 'image-right', 'image-left', 'quote', 'chart'" },
+                  chartType: { type: Type.STRING, description: "Must be one of: 'bar', 'line', 'pie', 'radar', 'area'" },
                   imagePlaceholder: {
                     type: Type.OBJECT,
                     properties: {
@@ -137,6 +139,36 @@ ${report}`;
   }
 }
 
+export async function aiPolishText(text: string, config: AppConfig): Promise<string> {
+  const prompt = `Please polish the following text to make it more professional, concise, and suitable for a presentation slide. Return ONLY the polished text, without any quotes or explanations.\n\nText to polish:\n${text}`;
+
+  if (config.llmProvider === 'gemini') {
+    const ai = new GoogleGenAI({ apiKey: config.geminiApiKey || process.env.GEMINI_API_KEY || import.meta.env.VITE_GEMINI_API_KEY });
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: prompt,
+    });
+    return response.text || text;
+  } else {
+    // OpenAI compatible
+    const res = await fetch(`${config.openaiEndpoint}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${config.openaiApiKey}`
+      },
+      body: JSON.stringify({
+        model: config.openaiModel || "gpt-4o",
+        messages: [{ role: "user", content: prompt }]
+      })
+    });
+    
+    if (!res.ok) throw new Error(`OpenAI API error: ${res.statusText}`);
+    const data = await res.json();
+    return data.choices[0].message.content || text;
+  }
+}
+
 export async function generateImage(prompt: string, config: AppConfig): Promise<string> {
   if (config.imageProvider === 'custom') {
     const res = await fetch(config.imageEndpoint, {
@@ -183,7 +215,7 @@ export async function generateImage(prompt: string, config: AppConfig): Promise<
     
     throw new Error("Unknown response format from custom image API");
   } else if (config.imageProvider === 'gemini') {
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const ai = new GoogleGenAI({ apiKey: config.geminiApiKey || process.env.GEMINI_API_KEY || import.meta.env.VITE_GEMINI_API_KEY });
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: {

@@ -32,84 +32,65 @@ export async function exportToGoogleSlides(presentation: Presentation, accessTok
   for (let i = 0; i < presentation.slides.length; i++) {
     const slide = presentation.slides[i];
     const slideObjectId = `slide_${i}`;
+    const titleId = `title_${i}`;
+    const bodyId = `body_${i}`;
     
-    // Create slide
+    let layout = 'TITLE_AND_BODY';
+    if (slide.layout === 'title') layout = 'TITLE';
+    if (slide.layout === 'image-right' || slide.layout === 'image-left' || slide.layout === 'chart') layout = 'TITLE_AND_TWO_COLUMNS';
+    
+    // Create slide with placeholder mappings
     requests.push({
       createSlide: {
         objectId: slideObjectId,
         slideLayoutReference: {
-          predefinedLayout: 'BLANK'
-        }
+          predefinedLayout: layout
+        },
+        placeholderIdMappings: [
+          {
+            layoutPlaceholder: { type: 'TITLE', index: 0 },
+            objectId: titleId
+          },
+          {
+            layoutPlaceholder: { type: slide.layout === 'title' ? 'SUBTITLE' : 'BODY', index: 0 },
+            objectId: bodyId
+          }
+        ]
       }
     });
 
     // Add Title
-    const titleId = genId();
-    requests.push({
-      createShape: {
-        objectId: titleId,
-        shapeType: 'TEXT_BOX',
-        elementProperties: {
-          pageObjectId: slideObjectId,
-          size: { width: { magnitude: 600, unit: 'PT' }, height: { magnitude: 60, unit: 'PT' } },
-          transform: { scaleX: 1, scaleY: 1, translateX: 50, translateY: 30, unit: 'PT' }
+    if (slide.title) {
+      requests.push({
+        insertText: {
+          objectId: titleId,
+          text: slide.title,
         }
-      }
-    });
-    requests.push({
-      insertText: {
-        objectId: titleId,
-        text: slide.title || 'Untitled',
-      }
-    });
-    requests.push({
-      updateTextStyle: {
-        objectId: titleId,
-        style: { fontSize: { magnitude: 32, unit: 'PT' }, bold: true },
-        fields: 'fontSize,bold'
-      }
-    });
+      });
+    }
 
     // Add Content
     const contentArray = Array.isArray(slide.content) ? slide.content : (typeof slide.content === 'string' ? [slide.content] : []);
     if (contentArray.length > 0) {
-      const contentId = genId();
-      const contentText = contentArray.map(c => `• ${typeof c === 'string' ? c : JSON.stringify(c)}`).join('\n');
+      const contentText = contentArray.map(c => typeof c === 'string' ? c : JSON.stringify(c)).join('\n');
       
-      let contentWidth = 600;
-      let contentX = 50;
-
-      if (slide.layout === 'image-right') {
-        contentWidth = 300;
-      } else if (slide.layout === 'image-left') {
-        contentWidth = 300;
-        contentX = 350;
-      }
-
-      requests.push({
-        createShape: {
-          objectId: contentId,
-          shapeType: 'TEXT_BOX',
-          elementProperties: {
-            pageObjectId: slideObjectId,
-            size: { width: { magnitude: contentWidth, unit: 'PT' }, height: { magnitude: 300, unit: 'PT' } },
-            transform: { scaleX: 1, scaleY: 1, translateX: contentX, translateY: 120, unit: 'PT' }
-          }
-        }
-      });
       requests.push({
         insertText: {
-          objectId: contentId,
+          objectId: bodyId,
           text: contentText,
         }
       });
-      requests.push({
-        updateTextStyle: {
-          objectId: contentId,
-          style: { fontSize: { magnitude: 18, unit: 'PT' } },
-          fields: 'fontSize'
-        }
-      });
+      
+      // Apply bullets if it's not a title slide or quote
+      if (slide.layout !== 'title' && slide.layout !== 'quote') {
+        requests.push({
+          createParagraphBullets: {
+            objectId: bodyId,
+            textRange: { type: 'ALL' },
+            bulletPreset: 'BULLET_DISC_CIRCLE_SQUARE'
+          }
+        });
+      }
     }
 
     // Add Image Placeholder Shape
@@ -134,6 +115,14 @@ export async function exportToGoogleSlides(presentation: Presentation, accessTok
           text: 'Image Placeholder\n(Replace in Google Slides)',
         }
       });
+    }
+    
+    // Add Speaker Notes
+    if (slide.speakerNotes) {
+      // Note: Adding speaker notes via batchUpdate requires knowing the notes page object ID,
+      // which is complex without a read request first. We will skip speaker notes for Google Slides
+      // in this simple implementation, or we can add it as a shape off-screen.
+      // For now, we skip to keep the batch update simple and reliable.
     }
   }
 
