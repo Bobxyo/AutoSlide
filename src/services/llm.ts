@@ -39,6 +39,84 @@ function parseLLMJSON(text: string): any {
   }
 }
 
+export function parseMarkdownToPresentation(markdown: string): Presentation {
+  const lines = markdown.split('\n');
+  const slides: any[] = [];
+  let currentSlide: any = null;
+  let presentationTitle = 'Generated Presentation';
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    
+    if (line.startsWith('# ')) {
+      if (!currentSlide && slides.length === 0) {
+        presentationTitle = line.substring(2).trim();
+        currentSlide = {
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          title: presentationTitle,
+          content: [],
+          layout: 'title',
+          speakerNotes: ''
+        };
+        slides.push(currentSlide);
+      } else {
+        currentSlide = {
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          title: line.substring(2).trim(),
+          content: [],
+          layout: 'title',
+          speakerNotes: ''
+        };
+        slides.push(currentSlide);
+      }
+    } else if (line.startsWith('## ') || line.startsWith('### ')) {
+      const title = line.replace(/^#+\s/, '').trim();
+      currentSlide = {
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        title: title,
+        content: [],
+        layout: 'content',
+        speakerNotes: ''
+      };
+      slides.push(currentSlide);
+    } else if (line.length > 0) {
+      if (!currentSlide) {
+        currentSlide = {
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          title: presentationTitle,
+          content: [],
+          layout: 'content',
+          speakerNotes: ''
+        };
+        slides.push(currentSlide);
+      }
+      
+      if (line.startsWith('- ') || line.startsWith('* ')) {
+        currentSlide.content.push(line.substring(2).trim());
+      } else if (line.match(/^\d+\.\s/)) {
+        currentSlide.content.push(line.replace(/^\d+\.\s/, '').trim());
+      } else {
+        currentSlide.content.push(line);
+      }
+    }
+  }
+
+  if (slides.length === 0) {
+    slides.push({
+      id: Date.now().toString(),
+      title: 'Presentation',
+      content: ['No content found in markdown.'],
+      layout: 'title',
+      speakerNotes: ''
+    });
+  }
+
+  return {
+    title: presentationTitle,
+    slides: slides
+  };
+}
+
 export async function generatePresentation(
   report: string,
   config: AppConfig
@@ -56,12 +134,14 @@ LAYOUT CONTEXT: ${layoutContext}
 Extract the key points into slides. 
 For each slide, provide:
 - A compelling 'title'
-- 'content': An array of detailed bullet points (MUST NOT BE EMPTY).
+- 'content': An array of detailed bullet points (MUST NOT BE EMPTY). The generated slide content should be rich, vivid, and detailed. Do not overly simplify the content. Retain the depth and nuances of the original report.
 - 'layout': Choose the best layout from: 'title', 'content', 'image-right', 'image-left', 'quote', 'chart'.
 - 'chartType': If layout is 'chart', choose the best type from: 'bar', 'line', 'pie', 'radar', 'area'.
 - 'imagePlaceholder': If layout is 'image-right' or 'image-left', provide a highly descriptive 'suggestedPrompt' for an AI image generator.
 - 'chartData': If layout is 'chart', provide an array of objects with 'name' and 'value' properties representing data from the report.
 - 'speakerNotes': MUST be a highly detailed, verbatim speech script. It should be long enough to cover 1-2 minutes of speaking per slide, explaining the concepts in detail as if presenting to a live audience without any prior preparation. Include transitions between slides. Ensure this is in the EXACT SAME LANGUAGE as the report.
+
+CRITICAL: You MUST extract the information sources, references, or citations from the end of the report and include them as the final slide(s) of the presentation to ensure professional credibility.
 
 Report:
 ${report}`;

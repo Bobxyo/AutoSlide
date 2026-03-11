@@ -49,6 +49,25 @@ export function ConfigPanel({ config, setConfig }: ConfigPanelProps) {
                 <option value="b5">B5 (Fixed 20mm margin)</option>
               </select>
             </div>
+            {(config.pageSize === 'a4' || config.pageSize === 'b5') && config.orientation === 'portrait' && (
+              <div className="flex items-start mt-4">
+                <div className="flex items-center h-5">
+                  <input
+                    id="directMarkdownRender"
+                    type="checkbox"
+                    checked={config.directMarkdownRender || false}
+                    onChange={(e) => handleChange('directMarkdownRender', e.target.checked)}
+                    className="w-4 h-4 text-indigo-600 bg-white border-neutral-300 rounded focus:ring-indigo-500"
+                  />
+                </div>
+                <div className="ml-3 text-sm">
+                  <label htmlFor="directMarkdownRender" className="font-medium text-neutral-700">
+                    Direct Markdown Render
+                  </label>
+                  <p className="text-neutral-500">Directly render GPT-Researcher markdown to slides for manual editing.</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

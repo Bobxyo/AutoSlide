@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Settings, FileText, Presentation as PresentationIcon, Download, Play, History, Trash2, Plus } from 'lucide-react';
 import { AppConfig, Presentation, Slide, HistoryTask } from './types';
 import { runResearch } from './services/researcher';
-import { generatePresentation } from './services/llm';
+import { generatePresentation, parseMarkdownToPresentation } from './services/llm';
 import { ConfigPanel } from './components/ConfigPanel';
 import { SlideEditor } from './components/SlideEditor';
 import { exportToPPTX } from './services/export';
@@ -102,7 +102,12 @@ export default function App() {
       setHistory(prev => prev.map(t => t.id === newTaskId ? { ...t, status: 'generating_ppt', report: generatedReport } : t));
 
       setLoadingMsg('Converting report to presentation...');
-      const generatedPresentation = await generatePresentation(generatedReport, config);
+      let generatedPresentation;
+      if (config.directMarkdownRender && (config.pageSize === 'a4' || config.pageSize === 'b5') && config.orientation === 'portrait') {
+        generatedPresentation = parseMarkdownToPresentation(generatedReport);
+      } else {
+        generatedPresentation = await generatePresentation(generatedReport, config);
+      }
       setPresentation(generatedPresentation);
       
       setHistory(prev => prev.map(t => t.id === newTaskId ? { ...t, status: 'done', presentation: generatedPresentation } : t));

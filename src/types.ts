@@ -35,6 +35,7 @@ export interface AppConfig {
   googleClientId?: string;
   orientation?: 'landscape' | 'portrait';
   pageSize?: 'web' | 'a4' | 'b5';
+  directMarkdownRender?: boolean;
 }
 
 export interface HistoryTask {
