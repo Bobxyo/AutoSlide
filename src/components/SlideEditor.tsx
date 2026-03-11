@@ -7,6 +7,8 @@ import { exportToPPTX } from '../services/export';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, LineChart, Line, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, AreaChart, Area } from 'recharts';
 import { useGoogleLogin } from '@react-oauth/google';
 import { exportToGoogleSlides } from '../services/googleSlides';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const COLORS = ['#4f46e5', '#818cf8', '#c7d2fe', '#e0e7ff', '#312e81', '#4338ca'];
 
@@ -435,6 +437,40 @@ function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }
                   <p className="text-xl leading-relaxed pt-1" style={{ color: theme.text }}>{c}</p>
                 </div>
               ))}
+            </div>
+          </div>
+        );
+      case 'markdown':
+        return (
+          <div className="flex flex-col h-full relative" style={{ backgroundColor: theme.bg, padding: margin }}>
+            <div className="absolute top-0 left-0 w-2 h-full" style={{ backgroundColor: theme.accent }}></div>
+            <div className="mb-8 pl-6">
+              <h2 className="text-4xl font-bold tracking-tight" style={{ color: theme.title }}>{title}</h2>
+            </div>
+            <div className="flex-1 pl-6 overflow-y-auto">
+              <div 
+                className="prose prose-lg max-w-none" 
+                style={{ 
+                  color: theme.text,
+                  '--tw-prose-body': theme.text,
+                  '--tw-prose-headings': theme.title,
+                  '--tw-prose-links': theme.accent,
+                  '--tw-prose-bold': theme.title,
+                  '--tw-prose-counters': theme.accent,
+                  '--tw-prose-bullets': theme.accent,
+                  '--tw-prose-hr': theme.accentBg,
+                  '--tw-prose-quotes': theme.title,
+                  '--tw-prose-quote-borders': theme.accent,
+                  '--tw-prose-captions': theme.text,
+                  '--tw-prose-code': theme.title,
+                  '--tw-prose-pre-code': theme.bg,
+                  '--tw-prose-pre-bg': theme.title,
+                  '--tw-prose-th-borders': theme.accentBg,
+                  '--tw-prose-td-borders': theme.accentBg,
+                } as React.CSSProperties}
+              >
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{contentArray.join('\n')}</ReactMarkdown>
+              </div>
             </div>
           </div>
         );

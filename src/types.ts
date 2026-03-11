@@ -2,7 +2,7 @@ export interface Slide {
   id: string;
   title: string;
   content: string[];
-  layout: 'title' | 'content' | 'image-right' | 'image-left' | 'quote' | 'chart';
+  layout: 'title' | 'content' | 'image-right' | 'image-left' | 'quote' | 'chart' | 'markdown';
   chartType?: 'bar' | 'line' | 'pie' | 'radar' | 'area';
   imagePlaceholder?: {
     suggestedPrompt: string;

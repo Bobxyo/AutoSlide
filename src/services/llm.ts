@@ -46,11 +46,12 @@ export function parseMarkdownToPresentation(markdown: string): Presentation {
   let presentationTitle = 'Generated Presentation';
 
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
+    const line = lines[i];
+    const trimmedLine = line.trim();
     
-    if (line.startsWith('# ')) {
+    if (trimmedLine.startsWith('# ')) {
       if (!currentSlide && slides.length === 0) {
-        presentationTitle = line.substring(2).trim();
+        presentationTitle = trimmedLine.substring(2).trim();
         currentSlide = {
           id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
           title: presentationTitle,
@@ -62,44 +63,46 @@ export function parseMarkdownToPresentation(markdown: string): Presentation {
       } else {
         currentSlide = {
           id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-          title: line.substring(2).trim(),
+          title: trimmedLine.substring(2).trim(),
           content: [],
           layout: 'title',
           speakerNotes: ''
         };
         slides.push(currentSlide);
       }
-    } else if (line.startsWith('## ') || line.startsWith('### ')) {
-      const title = line.replace(/^#+\s/, '').trim();
+    } else if (trimmedLine.startsWith('## ') || trimmedLine.startsWith('### ')) {
+      const title = trimmedLine.replace(/^#+\s/, '').trim();
       currentSlide = {
         id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
         title: title,
         content: [],
-        layout: 'content',
+        layout: 'markdown',
         speakerNotes: ''
       };
       slides.push(currentSlide);
-    } else if (line.length > 0) {
+    } else {
       if (!currentSlide) {
         currentSlide = {
           id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
           title: presentationTitle,
           content: [],
-          layout: 'content',
+          layout: 'markdown',
           speakerNotes: ''
         };
         slides.push(currentSlide);
       }
       
-      if (line.startsWith('- ') || line.startsWith('* ')) {
-        currentSlide.content.push(line.substring(2).trim());
-      } else if (line.match(/^\d+\.\s/)) {
-        currentSlide.content.push(line.replace(/^\d+\.\s/, '').trim());
-      } else {
-        currentSlide.content.push(line);
-      }
+      // Preserve the original line for markdown rendering
+      currentSlide.content.push(line);
     }
   }
+
+  // Join the content array into a single markdown string for the 'markdown' layout
+  slides.forEach(slide => {
+    if (slide.layout === 'markdown') {
+      slide.content = [slide.content.join('\n').trim()];
+    }
+  });
 
   if (slides.length === 0) {
     slides.push({
