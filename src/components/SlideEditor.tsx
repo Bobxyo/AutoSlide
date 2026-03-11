@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Presentation, Slide, AppConfig } from '../types';
 import { cn } from '../lib/utils';
 import { ImagePlus, Loader2, MessageSquareText, Download, LayoutTemplate, Presentation as PresentationIcon, Edit3 } from 'lucide-react';
@@ -173,15 +173,10 @@ export function SlideEditor({ presentation, setPresentation, config }: SlideEdit
               activeSlideIdx === idx ? "border-indigo-500 ring-2 ring-indigo-200" : "border-transparent hover:border-neutral-300"
             )}
           >
-            <div className="absolute top-2 left-2 bg-black/50 text-white text-[10px] px-1.5 py-0.5 rounded">
+            <div className="absolute top-2 left-2 bg-black/50 text-white text-[10px] px-1.5 py-0.5 rounded z-10">
               {idx + 1}
             </div>
-            <div className="p-2 text-[8px] leading-tight">
-              <div className="font-bold mb-1 truncate">{slide.title || 'Untitled Slide'}</div>
-              {(Array.isArray(slide.content) ? slide.content : (typeof slide.content === 'string' ? [slide.content] : [])).slice(0, 3).map((c, i) => (
-                <div key={i} className="truncate text-neutral-500">• {c}</div>
-              ))}
-            </div>
+            <ScaledSlide slide={slide} config={config} themeId={selectedTheme} interactive={false} />
           </div>
         ))}
       </div>
@@ -220,8 +215,8 @@ export function SlideEditor({ presentation, setPresentation, config }: SlideEdit
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto p-8 flex items-center justify-center relative" onMouseUp={handleMouseUp}>
-          <SlideCanvas slide={activeSlide} updateSlide={updateSlide} config={config} themeId={selectedTheme} />
+        <div className="flex-1 overflow-hidden p-4 md:p-8 flex items-center justify-center relative" onMouseUp={handleMouseUp}>
+          <ScaledSlide slide={activeSlide} updateSlide={updateSlide} config={config} themeId={selectedTheme} interactive={true} />
           
           {selection && (
             <div 
@@ -295,7 +290,51 @@ export function SlideEditor({ presentation, setPresentation, config }: SlideEdit
   );
 }
 
-function SlideCanvas({ slide, updateSlide, config, themeId }: { slide: Slide, updateSlide: (s: Slide) => void, config: AppConfig, themeId: string }) {
+function ScaledSlide({ slide, updateSlide, config, themeId, interactive = true }: { slide: Slide, updateSlide?: (s: Slide) => void, config: AppConfig, themeId: string, interactive?: boolean }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const observer = new ResizeObserver((entries) => {
+      for (let entry of entries) {
+        const { width, height } = entry.contentRect;
+        const scaleX = width / 1024;
+        const scaleY = height / 576;
+        setScale(Math.min(scaleX, scaleY));
+      }
+    });
+
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={containerRef} className="w-full h-full relative overflow-hidden">
+      <div 
+        style={{ 
+          width: '1024px', 
+          height: '576px', 
+          transform: `scale(${scale})`,
+          transformOrigin: 'top left',
+          position: 'absolute',
+          left: '50%',
+          top: '50%',
+          marginLeft: '-512px',
+          marginTop: '-288px',
+          pointerEvents: interactive ? 'auto' : 'none'
+        }}
+        className="bg-white"
+      >
+        <SlideCanvas slide={slide} updateSlide={updateSlide} config={config} themeId={themeId} interactive={interactive} />
+      </div>
+    </div>
+  );
+}
+
+function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }: { slide: Slide, updateSlide?: (s: Slide) => void, config: AppConfig, themeId: string, interactive?: boolean }) {
   const [generatingImg, setGeneratingImg] = useState(false);
 
   const themes: Record<string, any> = {
@@ -315,14 +354,16 @@ function SlideCanvas({ slide, updateSlide, config, themeId }: { slide: Slide, up
     setGeneratingImg(true);
     try {
       const url = await generateImage(promptToUse, config);
-      updateSlide({
-        ...slide,
-        imagePlaceholder: {
-          ...slide.imagePlaceholder,
-          suggestedPrompt: promptToUse,
-          url
-        }
-      });
+      if (updateSlide) {
+        updateSlide({
+          ...slide,
+          imagePlaceholder: {
+            ...slide.imagePlaceholder,
+            suggestedPrompt: promptToUse,
+            url
+          }
+        });
+      }
     } catch (e) {
       console.error(e);
       alert(`Failed to generate image: ${e instanceof Error ? e.message : 'Unknown error'}`);
@@ -385,7 +426,8 @@ function SlideCanvas({ slide, updateSlide, config, themeId }: { slide: Slide, up
                   placeholder={slide.imagePlaceholder} 
                   onGenerate={handleGenerateImage} 
                   loading={generatingImg} 
-                  updateImage={(url) => updateSlide({ ...slide, imagePlaceholder: { ...slide.imagePlaceholder, suggestedPrompt: slide.imagePlaceholder?.suggestedPrompt || '', url } })}
+                  updateImage={(url) => updateSlide && updateSlide({ ...slide, imagePlaceholder: { ...slide.imagePlaceholder, suggestedPrompt: slide.imagePlaceholder?.suggestedPrompt || '', url } })}
+                  interactive={interactive}
                 />
               </div>
             </div>
@@ -401,7 +443,8 @@ function SlideCanvas({ slide, updateSlide, config, themeId }: { slide: Slide, up
                   placeholder={slide.imagePlaceholder} 
                   onGenerate={handleGenerateImage} 
                   loading={generatingImg} 
-                  updateImage={(url) => updateSlide({ ...slide, imagePlaceholder: { ...slide.imagePlaceholder, suggestedPrompt: slide.imagePlaceholder?.suggestedPrompt || '', url } })}
+                  updateImage={(url) => updateSlide && updateSlide({ ...slide, imagePlaceholder: { ...slide.imagePlaceholder, suggestedPrompt: slide.imagePlaceholder?.suggestedPrompt || '', url } })}
+                  interactive={interactive}
                 />
               </div>
               <ul className="flex-1 text-lg space-y-5" style={{ color: theme.text }}>
@@ -542,13 +585,13 @@ function SlideCanvas({ slide, updateSlide, config, themeId }: { slide: Slide, up
   };
 
   return (
-    <div className="w-full max-w-5xl aspect-video shadow-xl rounded-sm overflow-hidden p-12 relative" style={{ backgroundColor: theme.bg }}>
+    <div className="w-full h-full overflow-hidden relative" style={{ backgroundColor: theme.bg }}>
       {renderContent()}
     </div>
   );
 }
 
-function ImagePlaceholder({ placeholder, onGenerate, loading, updateImage }: { placeholder?: Slide['imagePlaceholder'], onGenerate: (prompt?: string) => void, loading: boolean, updateImage: (url: string) => void }) {
+function ImagePlaceholder({ placeholder, onGenerate, loading, updateImage, interactive = true }: { placeholder?: Slide['imagePlaceholder'], onGenerate: (prompt?: string) => void, loading: boolean, updateImage: (url: string) => void, interactive?: boolean }) {
   const [showModal, setShowModal] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
 
@@ -556,9 +599,11 @@ function ImagePlaceholder({ placeholder, onGenerate, loading, updateImage }: { p
     return (
       <div className="w-full h-full relative group rounded-xl overflow-hidden shadow-inner border border-neutral-200">
         <img src={placeholder.url} alt="Slide image" className="w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-          <button onClick={() => setShowModal(true)} className="px-4 py-2 bg-white text-black rounded-lg text-sm font-medium">Edit Image</button>
-        </div>
+        {interactive && (
+          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+            <button onClick={() => setShowModal(true)} className="px-4 py-2 bg-white text-black rounded-lg text-sm font-medium">Edit Image</button>
+          </div>
+        )}
         {showModal && (
           <ImageEditModal 
             onClose={() => setShowModal(false)}
@@ -575,8 +620,11 @@ function ImagePlaceholder({ placeholder, onGenerate, loading, updateImage }: { p
   return (
     <>
       <div 
-        onDoubleClick={() => setShowModal(true)}
-        className="w-full h-full bg-neutral-100 border-2 border-dashed border-neutral-300 rounded-xl flex flex-col items-center justify-center text-neutral-400 hover:bg-neutral-50 hover:border-indigo-300 hover:text-indigo-500 transition-colors cursor-pointer p-6 text-center relative"
+        onDoubleClick={() => interactive && setShowModal(true)}
+        className={cn(
+          "w-full h-full bg-neutral-100 border-2 border-dashed border-neutral-300 rounded-xl flex flex-col items-center justify-center text-neutral-400 p-6 text-center relative",
+          interactive ? "hover:bg-neutral-50 hover:border-indigo-300 hover:text-indigo-500 transition-colors cursor-pointer" : ""
+        )}
       >
         {loading ? (
           <Loader2 className="w-8 h-8 animate-spin mb-2" />
@@ -604,6 +652,7 @@ function ImagePlaceholder({ placeholder, onGenerate, loading, updateImage }: { p
 function ImageEditModal({ onClose, onGenerate, onUrlSubmit, suggestedPrompt, loading }: any) {
   const [url, setUrl] = useState('');
   const [customPrompt, setCustomPrompt] = useState(suggestedPrompt || '');
+  const [previewUrl, setPreviewUrl] = useState('');
   
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -611,23 +660,41 @@ function ImageEditModal({ onClose, onGenerate, onUrlSubmit, suggestedPrompt, loa
       const reader = new FileReader();
       reader.onload = (event) => {
         if (event.target?.result) {
-          onUrlSubmit(event.target.result as string);
+          setPreviewUrl(event.target.result as string);
+          setUrl(''); // Clear URL if file is selected
         }
       };
       reader.readAsDataURL(file);
     }
   };
 
+  const handleApply = () => {
+    if (previewUrl) {
+      onUrlSubmit(previewUrl);
+    } else if (url) {
+      onUrlSubmit(url);
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden" onClick={e => e.stopPropagation()}>
-        <div className="p-6 border-b border-neutral-100">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="p-6 border-b border-neutral-100 flex justify-between items-center">
           <h3 className="text-lg font-semibold">Add Image</h3>
+          <button onClick={onClose} className="text-neutral-400 hover:text-neutral-600">✕</button>
         </div>
-        <div className="p-6 space-y-6">
+        
+        <div className="p-6 space-y-6 overflow-y-auto max-h-[70vh]">
+          {/* File Upload */}
           <div>
             <label className="block text-sm font-medium text-neutral-700 mb-2">Upload Local Image</label>
             <input type="file" accept="image/*" onChange={handleFileChange} className="w-full text-sm text-neutral-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+            {previewUrl && (
+              <div className="mt-3 rounded-lg overflow-hidden border border-neutral-200 h-32 relative">
+                <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                <button onClick={() => setPreviewUrl('')} className="absolute top-1 right-1 bg-black/50 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-black/70">✕</button>
+              </div>
+            )}
           </div>
           
           <div className="relative">
@@ -635,12 +702,16 @@ function ImageEditModal({ onClose, onGenerate, onUrlSubmit, suggestedPrompt, loa
             <div className="relative flex justify-center text-sm"><span className="px-2 bg-white text-neutral-500">Or</span></div>
           </div>
 
+          {/* URL Input */}
           <div>
             <label className="block text-sm font-medium text-neutral-700 mb-2">Image URL</label>
-            <div className="flex gap-2">
-              <input type="text" value={url} onChange={e => setUrl(e.target.value)} placeholder="https://..." className="flex-1 px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500" />
-              <button onClick={() => url && onUrlSubmit(url)} className="px-4 py-2 bg-neutral-100 text-neutral-700 rounded-md text-sm font-medium hover:bg-neutral-200">Add</button>
-            </div>
+            <input 
+              type="text" 
+              value={url} 
+              onChange={e => { setUrl(e.target.value); setPreviewUrl(''); }} 
+              placeholder="https://..." 
+              className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500" 
+            />
           </div>
 
           <div className="relative">
@@ -648,6 +719,7 @@ function ImageEditModal({ onClose, onGenerate, onUrlSubmit, suggestedPrompt, loa
             <div className="relative flex justify-center text-sm"><span className="px-2 bg-white text-neutral-500">Or</span></div>
           </div>
 
+          {/* AI Generation */}
           <div>
             <label className="block text-sm font-medium text-neutral-700 mb-2">AI Generation</label>
             <textarea 
@@ -659,12 +731,24 @@ function ImageEditModal({ onClose, onGenerate, onUrlSubmit, suggestedPrompt, loa
             <button 
               onClick={() => onGenerate(customPrompt)}
               disabled={loading || !customPrompt.trim()}
-              className="w-full px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full px-4 py-2 bg-emerald-600 text-white rounded-md text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
               Generate with AI
             </button>
           </div>
+        </div>
+
+        {/* Footer Actions */}
+        <div className="p-4 border-t border-neutral-100 bg-neutral-50 flex justify-end gap-2">
+          <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-200 rounded-md">Cancel</button>
+          <button 
+            onClick={handleApply} 
+            disabled={!previewUrl && !url}
+            className="px-6 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Apply Image
+          </button>
         </div>
       </div>
     </div>
