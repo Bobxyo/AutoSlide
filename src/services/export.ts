@@ -94,6 +94,34 @@ export async function exportToPPTX(presentation: Presentation, themeId: string =
   });
 
   pptx.defineSlideMaster({
+    title: 'TWO_ROW_TOP_BODY',
+    background: { color: theme.bg },
+    objects: [
+      { placeholder: { options: { name: 'title', type: 'title', x: margin, y: margin, w: contentW, h: titleH, valign: 'middle', fontSize: 36, color: theme.title, fontFace: theme.font, bold: true } } },
+      { placeholder: { options: { name: 'body', type: 'body', 
+        x: margin, 
+        y: bodyY, 
+        w: contentW, 
+        h: halfH, 
+        valign: 'top', fontSize: 20, color: theme.text, fontFace: theme.font } } }
+    ]
+  });
+
+  pptx.defineSlideMaster({
+    title: 'TWO_ROW_BOTTOM_BODY',
+    background: { color: theme.bg },
+    objects: [
+      { placeholder: { options: { name: 'title', type: 'title', x: margin, y: margin, w: contentW, h: titleH, valign: 'middle', fontSize: 36, color: theme.title, fontFace: theme.font, bold: true } } },
+      { placeholder: { options: { name: 'body', type: 'body', 
+        x: margin, 
+        y: bodyY + halfH + 0.4, 
+        w: contentW, 
+        h: halfH, 
+        valign: 'top', fontSize: 20, color: theme.text, fontFace: theme.font } } }
+    ]
+  });
+
+  pptx.defineSlideMaster({
     title: 'QUOTE_SLIDE',
     background: { color: theme.bg },
     objects: [
@@ -106,29 +134,40 @@ export async function exportToPPTX(presentation: Presentation, themeId: string =
     if (slide.layout === 'title') masterName = 'TITLE_SLIDE';
     if (slide.layout === 'image-right' || slide.layout === 'chart') masterName = 'TWO_COLUMN_LEFT_BODY';
     if (slide.layout === 'image-left') masterName = 'TWO_COLUMN_RIGHT_BODY';
+    if (slide.layout === 'image-top') masterName = 'TWO_ROW_BOTTOM_BODY';
+    if (slide.layout === 'image-bottom') masterName = 'TWO_ROW_TOP_BODY';
     if (slide.layout === 'quote') masterName = 'QUOTE_SLIDE';
 
     let slidePpt = pptx.addSlide({ masterName });
     
+    let contentArray: string[] = [];
+    if (Array.isArray(slide.content)) {
+      contentArray = slide.content.map(c => typeof c === 'string' ? c : JSON.stringify(c));
+    } else if (typeof slide.content === 'string') {
+      contentArray = [slide.content];
+    } else if (slide.content) {
+      contentArray = [JSON.stringify(slide.content)];
+    }
+    
     // Add title
     if (slide.layout === 'title') {
       slidePpt.addText(slide.title, { placeholder: 'title' });
-      slidePpt.addText(slide.content.map(c => ({ text: c })), { placeholder: 'body' });
+      slidePpt.addText(contentArray.map(c => ({ text: c })), { placeholder: 'body' });
     } else {
       if (slide.layout !== 'quote') {
         slidePpt.addText(slide.title, { placeholder: 'title' });
       }
 
       // Add content based on layout
-      if (slide.layout === 'content') {
-        slidePpt.addText(slide.content.map(c => ({ text: c, options: { bullet: true } })), { placeholder: 'body' });
+      if (slide.layout === 'content' || slide.layout === 'markdown') {
+        slidePpt.addText(contentArray.map(c => ({ text: c, options: { bullet: true } })), { placeholder: 'body' });
       } else if (slide.layout === 'image-right') {
         let imgX = isPortrait ? margin : margin + halfW + 0.4;
         let imgY = isPortrait ? bodyY + halfH + 0.4 : bodyY;
         let imgW = isPortrait ? contentW : halfW;
         let imgH = isPortrait ? halfH : bodyH;
 
-        slidePpt.addText(slide.content.map(c => ({ text: c, options: { bullet: true } })), { placeholder: 'body' });
+        slidePpt.addText(contentArray.map(c => ({ text: c, options: { bullet: true } })), { placeholder: 'body' });
         if (slide.imagePlaceholder?.url) {
           slidePpt.addImage({ data: slide.imagePlaceholder.url, x: imgX, y: imgY, w: imgW, h: imgH, sizing: { type: 'contain', w: imgW, h: imgH } });
         } else {
@@ -147,16 +186,42 @@ export async function exportToPPTX(presentation: Presentation, themeId: string =
           slidePpt.addShape(pptx.ShapeType.rect, { x: imgX, y: imgY, w: imgW, h: imgH, fill: { color: theme.accent } });
           slidePpt.addText('Image Placeholder', { x: imgX, y: imgY, w: imgW, h: imgH, align: 'center', color: theme.bg });
         }
-        slidePpt.addText(slide.content.map(c => ({ text: c, options: { bullet: true } })), { placeholder: 'body' });
+        slidePpt.addText(contentArray.map(c => ({ text: c, options: { bullet: true } })), { placeholder: 'body' });
+      } else if (slide.layout === 'image-top') {
+        let imgX = margin;
+        let imgY = bodyY;
+        let imgW = contentW;
+        let imgH = halfH;
+
+        if (slide.imagePlaceholder?.url) {
+          slidePpt.addImage({ data: slide.imagePlaceholder.url, x: imgX, y: imgY, w: imgW, h: imgH, sizing: { type: 'contain', w: imgW, h: imgH } });
+        } else {
+          slidePpt.addShape(pptx.ShapeType.rect, { x: imgX, y: imgY, w: imgW, h: imgH, fill: { color: theme.accent } });
+          slidePpt.addText('Image Placeholder', { x: imgX, y: imgY, w: imgW, h: imgH, align: 'center', color: theme.bg });
+        }
+        slidePpt.addText(contentArray.map(c => ({ text: c, options: { bullet: true } })), { placeholder: 'body' });
+      } else if (slide.layout === 'image-bottom') {
+        let imgX = margin;
+        let imgY = bodyY + halfH + 0.4;
+        let imgW = contentW;
+        let imgH = halfH;
+
+        slidePpt.addText(contentArray.map(c => ({ text: c, options: { bullet: true } })), { placeholder: 'body' });
+        if (slide.imagePlaceholder?.url) {
+          slidePpt.addImage({ data: slide.imagePlaceholder.url, x: imgX, y: imgY, w: imgW, h: imgH, sizing: { type: 'contain', w: imgW, h: imgH } });
+        } else {
+          slidePpt.addShape(pptx.ShapeType.rect, { x: imgX, y: imgY, w: imgW, h: imgH, fill: { color: theme.accent } });
+          slidePpt.addText('Image Placeholder', { x: imgX, y: imgY, w: imgW, h: imgH, align: 'center', color: theme.bg });
+        }
       } else if (slide.layout === 'quote') {
-        slidePpt.addText(slide.content.join('\n'), { placeholder: 'body' });
+        slidePpt.addText(contentArray.join('\n'), { placeholder: 'body' });
       } else if (slide.layout === 'chart') {
         let chartX = isPortrait ? margin : margin + halfW + 0.4;
         let chartY = isPortrait ? bodyY + halfH + 0.4 : bodyY;
         let chartW = isPortrait ? contentW : halfW;
         let chartH = isPortrait ? halfH : bodyH;
 
-        slidePpt.addText(slide.content.map(c => ({ text: c, options: { bullet: true } })), { placeholder: 'body' });
+        slidePpt.addText(contentArray.map(c => ({ text: c, options: { bullet: true } })), { placeholder: 'body' });
         if (slide.chartData && slide.chartData.length > 0) {
           const chartData = [
             {

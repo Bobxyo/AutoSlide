@@ -138,10 +138,10 @@ Extract the key points into slides.
 For each slide, provide:
 - A compelling 'title'
 - 'content': An array of detailed bullet points (MUST NOT BE EMPTY). The generated slide content should be rich, vivid, and detailed. Do not overly simplify the content. Retain the depth and nuances of the original report.
-- 'layout': Choose the best layout from: 'title', 'content', 'image-right', 'image-left', 'quote', 'chart'.
+- 'layout': Choose the best layout from: 'title', 'content', 'markdown', 'image-right', 'image-left', 'image-top', 'image-bottom', 'quote', 'chart'.
 - 'chartType': If layout is 'chart', choose the best type from: 'bar', 'line', 'pie', 'radar', 'area'.
-- 'imagePlaceholder': If layout is 'image-right' or 'image-left', provide a highly descriptive 'suggestedPrompt' for an AI image generator.
-- 'chartData': If layout is 'chart', provide an array of objects with 'name' and 'value' properties representing data from the report.
+- 'imagePlaceholder': If layout is 'image-right', 'image-left', 'image-top', or 'image-bottom', provide a highly descriptive 'suggestedPrompt' for an AI image generator.
+- 'chartData': If layout is 'chart', extract REAL numerical data from the report. Provide an array of objects with 'name' (string, the category/item name) and 'value' (number, the numerical value). DO NOT use placeholder names like "Item 1".
 - 'speakerNotes': MUST be a highly detailed, verbatim speech script. It should be long enough to cover 1-2 minutes of speaking per slide, explaining the concepts in detail as if presenting to a live audience without any prior preparation. Include transitions between slides. Ensure this is in the EXACT SAME LANGUAGE as the report.
 
 CRITICAL: You MUST extract the information sources, references, or citations from the end of the report and include them as the final slide(s) of the presentation to ensure professional credibility.
@@ -168,7 +168,7 @@ ${report}`;
                   id: { type: Type.STRING },
                   title: { type: Type.STRING },
                   content: { type: Type.ARRAY, items: { type: Type.STRING } },
-                  layout: { type: Type.STRING, description: "Must be one of: 'title', 'content', 'image-right', 'image-left', 'quote', 'chart'" },
+                  layout: { type: Type.STRING, description: "Must be one of: 'title', 'content', 'markdown', 'image-right', 'image-left', 'image-top', 'image-bottom', 'quote', 'chart'" },
                   chartType: { type: Type.STRING, description: "Must be one of: 'bar', 'line', 'pie', 'radar', 'area'" },
                   imagePlaceholder: {
                     type: Type.OBJECT,
@@ -231,6 +231,62 @@ ${report}`;
   }
 }
 
+export async function extractChartData(text: string, config: AppConfig): Promise<{ name: string, value: number }[]> {
+  const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+  const model = import.meta.env.VITE_OPENAI_MODEL || 'gemini-3-flash-preview';
+  
+  const prompt = `Extract numerical data from the following text to create a chart.
+Return a JSON array of objects, where each object has a 'name' (string, the category or item name) and a 'value' (number, the numerical value).
+If no clear data is found, return an empty array [].
+DO NOT use placeholder names like "Item 1". Extract the real names from the text.
+
+Text:
+"${text}"`;
+
+  try {
+    if (config.llmProvider === 'openai') {
+      const response = await fetch(`${import.meta.env.VITE_OPENAI_ENDPOINT}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.1,
+        })
+      });
+      
+      if (!response.ok) throw new Error('OpenAI API error');
+      const data = await response.json();
+      return parseLLMJSON(data.choices[0].message.content) || [];
+    } else {
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: prompt,
+        config: {
+          temperature: 0.1,
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                name: { type: Type.STRING },
+                value: { type: Type.NUMBER }
+              }
+            }
+          }
+        }
+      });
+      return JSON.parse(response.text || '[]');
+    }
+  } catch (e) {
+    console.error("Error extracting chart data:", e);
+    return [];
+  }
+}
 export async function aiPolishText(text: string, config: AppConfig): Promise<string> {
   const prompt = `Please polish the following text to make it more professional, concise, and suitable for a presentation slide. Return ONLY the polished text, without any quotes or explanations.\n\nText to polish:\n${text}`;
 

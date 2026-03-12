@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Presentation, Slide, AppConfig } from '../types';
 import { cn } from '../lib/utils';
 import { ImagePlus, Loader2, MessageSquareText, Download, LayoutTemplate, Presentation as PresentationIcon, Edit3, FileText, Undo, Redo } from 'lucide-react';
-import { generateImage, aiPolishText } from '../services/llm';
+import { generateImage, aiPolishText, extractChartData } from '../services/llm';
 import { exportToPPTX } from '../services/export';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, LineChart, Line, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, AreaChart, Area } from 'recharts';
 import { useGoogleLogin } from '@react-oauth/google';
@@ -133,11 +133,12 @@ export function SlideEditor({ presentation, setPresentation, config, onViewRepor
         
         updateSlide(newSlide);
       } else if (action === 'chart') {
+        const extractedData = await extractChartData(selection.text, config);
         updateSlide({
           ...activeSlide,
           layout: 'chart',
           chartType: 'bar',
-          chartData: [
+          chartData: extractedData.length > 0 ? extractedData : [
             { name: 'Item 1', value: 40 },
             { name: 'Item 2', value: 60 },
             { name: 'Item 3', value: 30 }
@@ -261,6 +262,8 @@ export function SlideEditor({ presentation, setPresentation, config, onViewRepor
               <option value="markdown">Markdown</option>
               <option value="image-right">Image Right</option>
               <option value="image-left">Image Left</option>
+              <option value="image-top">Image Top</option>
+              <option value="image-bottom">Image Bottom</option>
               <option value="quote">Quote</option>
               <option value="chart">Chart</option>
             </select>
@@ -595,27 +598,18 @@ function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }
       case 'image-right':
         return (
           <div className={`flex ${isPortrait ? 'flex-col' : 'flex-row'} h-full`} style={{ backgroundColor: theme.bg, padding: margin }}>
-            <div className={`${isPortrait ? 'w-full h-1/2 pb-6' : 'w-1/2 pr-12'} flex flex-col justify-center relative`}>
+            <div className={`${isPortrait ? 'w-full h-1/2 pb-6' : 'w-1/2 pr-12'} flex flex-col relative`}>
               <div className={`absolute ${isPortrait ? 'top-0 left-0' : 'top-12 left-0'} w-12 h-1.5 rounded-full`} style={{ backgroundColor: theme.accent }}></div>
               <h2 className={`text-4xl font-bold mb-10 ${isPortrait ? 'mt-4' : 'mt-8'} leading-tight`} style={{ color: theme.title }}>{title}</h2>
-              <ul className="text-xl space-y-6 flex-1">
-                {contentArray.map((c, i) => (
-                  <li key={i} className="flex items-start gap-4">
-                    <span className="mt-2 w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: theme.accent }}></span>
-                    <span className="leading-relaxed" style={{ color: theme.text }}>{c}</span>
-                  </li>
-                ))}
-              </ul>
+              <div className="flex-1 overflow-y-auto">
+                <div className="prose prose-lg max-w-none" style={{ color: theme.text, '--tw-prose-body': theme.text, '--tw-prose-headings': theme.title, '--tw-prose-links': theme.accent, '--tw-prose-bold': theme.title, '--tw-prose-counters': theme.accent, '--tw-prose-bullets': theme.accent, '--tw-prose-hr': theme.accentBg, '--tw-prose-quotes': theme.title, '--tw-prose-quote-borders': theme.accent, '--tw-prose-captions': theme.text, '--tw-prose-code': theme.title, '--tw-prose-pre-code': theme.bg, '--tw-prose-pre-bg': theme.title, '--tw-prose-th-borders': theme.accentBg, '--tw-prose-td-borders': theme.accentBg } as React.CSSProperties}>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{contentArray.join('\n')}</ReactMarkdown>
+                </div>
+              </div>
             </div>
             <div className={`${isPortrait ? 'w-full h-1/2 pt-6' : 'w-1/2 pl-6'}`}>
               <div className="w-full h-full rounded-3xl overflow-hidden shadow-2xl relative">
-                <ImagePlaceholder 
-                  placeholder={slide.imagePlaceholder} 
-                  onGenerate={handleGenerateImage} 
-                  loading={generatingImg} 
-                  updateImage={(url) => updateSlide && updateSlide({ ...slide, imagePlaceholder: { ...slide.imagePlaceholder, suggestedPrompt: slide.imagePlaceholder?.suggestedPrompt || '', url } })}
-                  interactive={interactive}
-                />
+                <ImagePlaceholder placeholder={slide.imagePlaceholder} onGenerate={handleGenerateImage} loading={generatingImg} updateImage={(url) => updateSlide && updateSlide({ ...slide, imagePlaceholder: { ...slide.imagePlaceholder, suggestedPrompt: slide.imagePlaceholder?.suggestedPrompt || '', url } })} interactive={interactive} />
               </div>
             </div>
           </div>
@@ -625,26 +619,55 @@ function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }
           <div className={`flex ${isPortrait ? 'flex-col' : 'flex-row'} h-full`} style={{ backgroundColor: theme.bg, padding: margin }}>
             <div className={`${isPortrait ? 'w-full h-1/2 pb-6' : 'w-1/2 pr-6'}`}>
               <div className="w-full h-full rounded-3xl overflow-hidden shadow-2xl relative">
-                <ImagePlaceholder 
-                  placeholder={slide.imagePlaceholder} 
-                  onGenerate={handleGenerateImage} 
-                  loading={generatingImg} 
-                  updateImage={(url) => updateSlide && updateSlide({ ...slide, imagePlaceholder: { ...slide.imagePlaceholder, suggestedPrompt: slide.imagePlaceholder?.suggestedPrompt || '', url } })}
-                  interactive={interactive}
-                />
+                <ImagePlaceholder placeholder={slide.imagePlaceholder} onGenerate={handleGenerateImage} loading={generatingImg} updateImage={(url) => updateSlide && updateSlide({ ...slide, imagePlaceholder: { ...slide.imagePlaceholder, suggestedPrompt: slide.imagePlaceholder?.suggestedPrompt || '', url } })} interactive={interactive} />
               </div>
             </div>
-            <div className={`${isPortrait ? 'w-full h-1/2 pt-6' : 'w-1/2 pl-12'} flex flex-col justify-center relative`}>
+            <div className={`${isPortrait ? 'w-full h-1/2 pt-6' : 'w-1/2 pl-12'} flex flex-col relative`}>
               <div className={`absolute ${isPortrait ? 'top-6 left-12' : 'top-12 left-12'} w-12 h-1.5 rounded-full`} style={{ backgroundColor: theme.accent }}></div>
               <h2 className={`text-4xl font-bold mb-10 ${isPortrait ? 'mt-4' : 'mt-8'} leading-tight`} style={{ color: theme.title }}>{title}</h2>
-              <ul className="text-xl space-y-6 flex-1">
-                {contentArray.map((c, i) => (
-                  <li key={i} className="flex items-start gap-4">
-                    <span className="mt-2 w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: theme.accent }}></span>
-                    <span className="leading-relaxed" style={{ color: theme.text }}>{c}</span>
-                  </li>
-                ))}
-              </ul>
+              <div className="flex-1 overflow-y-auto">
+                <div className="prose prose-lg max-w-none" style={{ color: theme.text, '--tw-prose-body': theme.text, '--tw-prose-headings': theme.title, '--tw-prose-links': theme.accent, '--tw-prose-bold': theme.title, '--tw-prose-counters': theme.accent, '--tw-prose-bullets': theme.accent, '--tw-prose-hr': theme.accentBg, '--tw-prose-quotes': theme.title, '--tw-prose-quote-borders': theme.accent, '--tw-prose-captions': theme.text, '--tw-prose-code': theme.title, '--tw-prose-pre-code': theme.bg, '--tw-prose-pre-bg': theme.title, '--tw-prose-th-borders': theme.accentBg, '--tw-prose-td-borders': theme.accentBg } as React.CSSProperties}>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{contentArray.join('\n')}</ReactMarkdown>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      case 'image-top':
+        return (
+          <div className="flex flex-col h-full" style={{ backgroundColor: theme.bg, padding: margin }}>
+            <div className="w-full h-1/2 pb-6">
+              <div className="w-full h-full rounded-3xl overflow-hidden shadow-2xl relative">
+                <ImagePlaceholder placeholder={slide.imagePlaceholder} onGenerate={handleGenerateImage} loading={generatingImg} updateImage={(url) => updateSlide && updateSlide({ ...slide, imagePlaceholder: { ...slide.imagePlaceholder, suggestedPrompt: slide.imagePlaceholder?.suggestedPrompt || '', url } })} interactive={interactive} />
+              </div>
+            </div>
+            <div className="w-full h-1/2 pt-6 flex flex-col relative">
+              <div className="absolute top-6 left-0 w-12 h-1.5 rounded-full" style={{ backgroundColor: theme.accent }}></div>
+              <h2 className="text-4xl font-bold mb-6 mt-4 leading-tight" style={{ color: theme.title }}>{title}</h2>
+              <div className="flex-1 overflow-y-auto">
+                <div className="prose prose-lg max-w-none" style={{ color: theme.text, '--tw-prose-body': theme.text, '--tw-prose-headings': theme.title, '--tw-prose-links': theme.accent, '--tw-prose-bold': theme.title, '--tw-prose-counters': theme.accent, '--tw-prose-bullets': theme.accent, '--tw-prose-hr': theme.accentBg, '--tw-prose-quotes': theme.title, '--tw-prose-quote-borders': theme.accent, '--tw-prose-captions': theme.text, '--tw-prose-code': theme.title, '--tw-prose-pre-code': theme.bg, '--tw-prose-pre-bg': theme.title, '--tw-prose-th-borders': theme.accentBg, '--tw-prose-td-borders': theme.accentBg } as React.CSSProperties}>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{contentArray.join('\n')}</ReactMarkdown>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      case 'image-bottom':
+        return (
+          <div className="flex flex-col h-full" style={{ backgroundColor: theme.bg, padding: margin }}>
+            <div className="w-full h-1/2 pb-6 flex flex-col relative">
+              <div className="absolute top-0 left-0 w-12 h-1.5 rounded-full" style={{ backgroundColor: theme.accent }}></div>
+              <h2 className="text-4xl font-bold mb-6 mt-4 leading-tight" style={{ color: theme.title }}>{title}</h2>
+              <div className="flex-1 overflow-y-auto">
+                <div className="prose prose-lg max-w-none" style={{ color: theme.text, '--tw-prose-body': theme.text, '--tw-prose-headings': theme.title, '--tw-prose-links': theme.accent, '--tw-prose-bold': theme.title, '--tw-prose-counters': theme.accent, '--tw-prose-bullets': theme.accent, '--tw-prose-hr': theme.accentBg, '--tw-prose-quotes': theme.title, '--tw-prose-quote-borders': theme.accent, '--tw-prose-captions': theme.text, '--tw-prose-code': theme.title, '--tw-prose-pre-code': theme.bg, '--tw-prose-pre-bg': theme.title, '--tw-prose-th-borders': theme.accentBg, '--tw-prose-td-borders': theme.accentBg } as React.CSSProperties}>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{contentArray.join('\n')}</ReactMarkdown>
+                </div>
+              </div>
+            </div>
+            <div className="w-full h-1/2 pt-6">
+              <div className="w-full h-full rounded-3xl overflow-hidden shadow-2xl relative">
+                <ImagePlaceholder placeholder={slide.imagePlaceholder} onGenerate={handleGenerateImage} loading={generatingImg} updateImage={(url) => updateSlide && updateSlide({ ...slide, imagePlaceholder: { ...slide.imagePlaceholder, suggestedPrompt: slide.imagePlaceholder?.suggestedPrompt || '', url } })} interactive={interactive} />
+              </div>
             </div>
           </div>
         );

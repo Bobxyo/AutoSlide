@@ -7,7 +7,7 @@ interface ConfigPanelProps {
 }
 
 export function ConfigPanel({ config, setConfig }: ConfigPanelProps) {
-  const handleChange = (key: keyof AppConfig, value: string | number) => {
+  const handleChange = (key: keyof AppConfig, value: any) => {
     setConfig(prev => ({ ...prev, [key]: value }));
   };
 
