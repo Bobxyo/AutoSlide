@@ -202,6 +202,73 @@ export function ConfigPanel({ config, setConfig }: ConfigPanelProps) {
             className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
           />
         </div>
+
+        <div className="pt-4 border-t border-neutral-200">
+          <h3 className="text-sm font-semibold text-neutral-900 mb-3">Custom Theme Settings</h3>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-medium text-neutral-700 mb-1">Background Color</label>
+              <div className="flex gap-2">
+                <input type="color" value={config.customTheme?.bg || '#FFFFFF'} onChange={(e) => handleChange('customTheme', { ...config.customTheme, bg: e.target.value })} className="w-8 h-8 rounded cursor-pointer" />
+                <input type="text" value={config.customTheme?.bg || '#FFFFFF'} onChange={(e) => handleChange('customTheme', { ...config.customTheme, bg: e.target.value })} className="flex-1 px-2 py-1 border border-neutral-300 rounded-md text-sm" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-neutral-700 mb-1">Title Color</label>
+              <div className="flex gap-2">
+                <input type="color" value={config.customTheme?.title || '#000000'} onChange={(e) => handleChange('customTheme', { ...config.customTheme, title: e.target.value })} className="w-8 h-8 rounded cursor-pointer" />
+                <input type="text" value={config.customTheme?.title || '#000000'} onChange={(e) => handleChange('customTheme', { ...config.customTheme, title: e.target.value })} className="flex-1 px-2 py-1 border border-neutral-300 rounded-md text-sm" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-neutral-700 mb-1">Text Color</label>
+              <div className="flex gap-2">
+                <input type="color" value={config.customTheme?.text || '#333333'} onChange={(e) => handleChange('customTheme', { ...config.customTheme, text: e.target.value })} className="w-8 h-8 rounded cursor-pointer" />
+                <input type="text" value={config.customTheme?.text || '#333333'} onChange={(e) => handleChange('customTheme', { ...config.customTheme, text: e.target.value })} className="flex-1 px-2 py-1 border border-neutral-300 rounded-md text-sm" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-neutral-700 mb-1">Accent Color</label>
+              <div className="flex gap-2">
+                <input type="color" value={config.customTheme?.accent || '#3B82F6'} onChange={(e) => handleChange('customTheme', { ...config.customTheme, accent: e.target.value })} className="w-8 h-8 rounded cursor-pointer" />
+                <input type="text" value={config.customTheme?.accent || '#3B82F6'} onChange={(e) => handleChange('customTheme', { ...config.customTheme, accent: e.target.value })} className="flex-1 px-2 py-1 border border-neutral-300 rounded-md text-sm" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-neutral-700 mb-1">Accent Background</label>
+              <div className="flex gap-2">
+                <input type="color" value={config.customTheme?.accentBg || '#EFF6FF'} onChange={(e) => handleChange('customTheme', { ...config.customTheme, accentBg: e.target.value })} className="w-8 h-8 rounded cursor-pointer" />
+                <input type="text" value={config.customTheme?.accentBg || '#EFF6FF'} onChange={(e) => handleChange('customTheme', { ...config.customTheme, accentBg: e.target.value })} className="flex-1 px-2 py-1 border border-neutral-300 rounded-md text-sm" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-neutral-700 mb-1">Font Family</label>
+              <select 
+                value={config.customTheme?.fontFamily || 'sans-serif'} 
+                onChange={(e) => handleChange('customTheme', { ...config.customTheme, fontFamily: e.target.value })} 
+                className="w-full px-2 py-1 border border-neutral-300 rounded-md text-sm"
+              >
+                <option value="sans-serif">Sans Serif</option>
+                <option value="serif">Serif</option>
+                <option value="monospace">Monospace</option>
+                <option value="system-ui">System UI</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-neutral-700 mb-1">Base Font Size</label>
+              <select 
+                value={config.customTheme?.baseFontSize || '16px'} 
+                onChange={(e) => handleChange('customTheme', { ...config.customTheme, baseFontSize: e.target.value })} 
+                className="w-full px-2 py-1 border border-neutral-300 rounded-md text-sm"
+              >
+                <option value="14px">Small (14px)</option>
+                <option value="16px">Medium (16px)</option>
+                <option value="18px">Large (18px)</option>
+                <option value="20px">Extra Large (20px)</option>
+              </select>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

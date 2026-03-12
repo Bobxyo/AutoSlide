@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Presentation, Slide, AppConfig } from '../types';
 import { cn } from '../lib/utils';
-import { ImagePlus, Loader2, MessageSquareText, Download, LayoutTemplate, Presentation as PresentationIcon, Edit3 } from 'lucide-react';
+import { ImagePlus, Loader2, MessageSquareText, Download, LayoutTemplate, Presentation as PresentationIcon, Edit3, FileText, Undo, Redo } from 'lucide-react';
 import { generateImage, aiPolishText } from '../services/llm';
 import { exportToPPTX } from '../services/export';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, LineChart, Line, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, AreaChart, Area } from 'recharts';
@@ -16,12 +16,16 @@ interface SlideEditorProps {
   presentation: Presentation;
   setPresentation: React.Dispatch<React.SetStateAction<Presentation | null>>;
   config: AppConfig;
+  onViewReport?: () => void;
 }
 
-export function SlideEditor({ presentation, setPresentation, config }: SlideEditorProps) {
+export function SlideEditor({ presentation, setPresentation, config, onViewReport }: SlideEditorProps) {
   const [activeSlideIdx, setActiveSlideIdx] = useState(0);
   const [exporting, setExporting] = useState(false);
   
+  const [undoStack, setUndoStack] = useState<Presentation[]>([]);
+  const [redoStack, setRedoStack] = useState<Presentation[]>([]);
+
   // Safety check in case LLM returns invalid format
   const slides = presentation?.slides || [];
   const activeSlide = slides[activeSlideIdx];
@@ -29,7 +33,26 @@ export function SlideEditor({ presentation, setPresentation, config }: SlideEdit
   const updateSlide = (updatedSlide: Slide) => {
     const newSlides = [...slides];
     newSlides[activeSlideIdx] = updatedSlide;
-    setPresentation({ ...presentation, slides: newSlides });
+    const newPresentation = { ...presentation, slides: newSlides };
+    setUndoStack(prev => [...prev, presentation]);
+    setRedoStack([]);
+    setPresentation(newPresentation);
+  };
+
+  const handleUndo = () => {
+    if (undoStack.length === 0) return;
+    const prev = undoStack[undoStack.length - 1];
+    setUndoStack(prevStack => prevStack.slice(0, -1));
+    setRedoStack(prevStack => [...prevStack, presentation]);
+    setPresentation(prev);
+  };
+
+  const handleRedo = () => {
+    if (redoStack.length === 0) return;
+    const next = redoStack[redoStack.length - 1];
+    setRedoStack(prevStack => prevStack.slice(0, -1));
+    setUndoStack(prevStack => [...prevStack, presentation]);
+    setPresentation(next);
   };
 
   const [exportingGoogle, setExportingGoogle] = useState(false);
@@ -148,6 +171,23 @@ export function SlideEditor({ presentation, setPresentation, config }: SlideEdit
     }
   };
 
+  const handleExportPDF = () => {
+    window.print();
+  };
+
+  const handleExportMarkdown = () => {
+    const mdContent = presentation.rawMarkdown || slides.map(s => `# ${s.title}\n\n${Array.isArray(s.content) ? s.content.join('\n') : s.content}`).join('\n\n---\n\n');
+    const blob = new Blob([mdContent], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${presentation.title || 'presentation'}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   if (!slides || slides.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center p-8 text-center">
@@ -187,10 +227,70 @@ export function SlideEditor({ presentation, setPresentation, config }: SlideEdit
       <div className="flex-1 flex flex-col overflow-hidden bg-neutral-200/50">
         {/* Editor Toolbar */}
         <div className="h-14 bg-white border-b border-neutral-200 px-4 flex items-center justify-between">
-          <div className="text-sm font-medium text-neutral-700">
-            Slide {activeSlideIdx + 1} of {slides.length}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1">
+              <button 
+                onClick={handleUndo} 
+                disabled={undoStack.length === 0}
+                className="p-1.5 text-neutral-600 hover:bg-neutral-100 rounded-md disabled:opacity-30 transition-colors"
+                title="Undo"
+              >
+                <Undo className="w-4 h-4" />
+              </button>
+              <button 
+                onClick={handleRedo} 
+                disabled={redoStack.length === 0}
+                className="p-1.5 text-neutral-600 hover:bg-neutral-100 rounded-md disabled:opacity-30 transition-colors"
+                title="Redo"
+              >
+                <Redo className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="h-4 w-px bg-neutral-300"></div>
+            <div className="text-sm font-medium text-neutral-700">
+              Slide {activeSlideIdx + 1} of {slides.length}
+            </div>
+            <div className="h-4 w-px bg-neutral-300"></div>
+            <select 
+              value={activeSlide.layout}
+              onChange={(e) => updateSlide({ ...activeSlide, layout: e.target.value as any })}
+              className="text-sm border border-neutral-300 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            >
+              <option value="title">Title</option>
+              <option value="content">Content</option>
+              <option value="markdown">Markdown</option>
+              <option value="image-right">Image Right</option>
+              <option value="image-left">Image Left</option>
+              <option value="quote">Quote</option>
+              <option value="chart">Chart</option>
+            </select>
+            {activeSlide.layout === 'chart' && (
+              <select
+                value={activeSlide.chartType || 'bar'}
+                onChange={(e) => updateSlide({ ...activeSlide, chartType: e.target.value as any })}
+                className="text-sm border border-neutral-300 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              >
+                <option value="bar">Bar Chart</option>
+                <option value="line">Line Chart</option>
+                <option value="pie">Pie Chart</option>
+                <option value="radar">Radar Chart</option>
+                <option value="area">Area Chart</option>
+              </select>
+            )}
           </div>
           <div className="flex items-center gap-2">
+            {onViewReport && (
+              <button 
+                onClick={() => {
+                  if (window.confirm('Are you sure you want to go back to the report? Any unsaved slide edits will be lost.')) {
+                    onViewReport();
+                  }
+                }}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-neutral-700 bg-white border border-neutral-300 rounded-md hover:bg-neutral-50 transition-colors"
+              >
+                View Report
+              </button>
+            )}
             <button 
               onClick={() => setShowTemplateModal(true)}
               className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-neutral-700 bg-white border border-neutral-300 rounded-md hover:bg-neutral-50 transition-colors"
@@ -207,12 +307,26 @@ export function SlideEditor({ presentation, setPresentation, config }: SlideEdit
               Google Slides
             </button>
             <button 
+              onClick={handleExportMarkdown}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-neutral-700 bg-white border border-neutral-300 rounded-md hover:bg-neutral-50 transition-colors"
+            >
+              <FileText className="w-4 h-4" />
+              Markdown
+            </button>
+            <button 
+              onClick={handleExportPDF}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-neutral-700 bg-white border border-neutral-300 rounded-md hover:bg-neutral-50 transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              PDF
+            </button>
+            <button 
               onClick={handleExport}
               disabled={exporting}
               className="flex items-center gap-2 px-4 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors disabled:opacity-50"
             >
               {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-              Export PPTX
+              PPTX
             </button>
           </div>
         </div>
@@ -267,7 +381,8 @@ export function SlideEditor({ presentation, setPresentation, config }: SlideEdit
                 { id: 'modern', name: 'Modern Indigo', desc: 'Clean, professional design with indigo accents' },
                 { id: 'dark', name: 'Dark Mode', desc: 'Sleek dark background with high contrast text' },
                 { id: 'corporate', name: 'Corporate Blue', desc: 'Traditional business presentation style' },
-                { id: 'creative', name: 'Creative Coral', desc: 'Vibrant and energetic design' }
+                { id: 'creative', name: 'Creative Coral', desc: 'Vibrant and energetic design' },
+                { id: 'custom', name: 'Custom Theme', desc: 'Your personalized theme settings' }
               ].map(theme => (
                 <div 
                   key={theme.id}
@@ -341,7 +456,9 @@ function ScaledSlide({ slide, updateSlide, config, themeId, interactive = true }
           left: '50%',
           top: '50%',
           transformOrigin: 'center',
-          pointerEvents: interactive ? 'auto' : 'none'
+          pointerEvents: interactive ? 'auto' : 'none',
+          fontFamily: config.customTheme?.fontFamily || 'inherit',
+          fontSize: config.customTheme?.baseFontSize || 'inherit',
         }}
         className="bg-white shadow-sm"
       >
@@ -358,7 +475,8 @@ function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }
     modern: { bg: '#F8FAFC', title: '#0F172A', text: '#334155', accent: '#4F46E5', accentBg: '#E0E7FF' },
     dark: { bg: '#0F172A', title: '#F8FAFC', text: '#CBD5E1', accent: '#818CF8', accentBg: '#1E293B' },
     corporate: { bg: '#FFFFFF', title: '#1E3A8A', text: '#475569', accent: '#2563EB', accentBg: '#DBEAFE' },
-    creative: { bg: '#FFF1F2', title: '#881337', text: '#701A75', accent: '#E11D48', accentBg: '#FFE4E6' }
+    creative: { bg: '#FFF1F2', title: '#881337', text: '#701A75', accent: '#E11D48', accentBg: '#FFE4E6' },
+    custom: config.customTheme || { bg: '#FFFFFF', title: '#000000', text: '#333333', accent: '#3B82F6', accentBg: '#EFF6FF' }
   };
   const theme = themes[themeId] || themes.modern;
   const layoutConfig = getLayoutConfig(config);
@@ -626,15 +744,30 @@ function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }
               <h2 className="text-4xl font-bold tracking-tight" style={{ color: theme.title }}>{title}</h2>
             </div>
             <div className={`flex flex-1 ${isPortrait ? 'flex-col gap-6' : 'gap-10'}`}>
-              <div className={`${isPortrait ? 'w-full h-2/5' : 'w-5/12'} flex flex-col justify-center`}>
-                <ul className="text-xl space-y-6" style={{ color: theme.text }}>
-                  {contentArray.map((c, i) => (
-                    <li key={i} className="flex items-start gap-4 p-4 rounded-xl" style={{ backgroundColor: theme.accentBg + '40' }}>
-                      <span className="mt-2 w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: theme.accent }}></span>
-                      <span className="leading-relaxed">{c}</span>
-                    </li>
-                  ))}
-                </ul>
+              <div className={`${isPortrait ? 'w-full h-2/5' : 'w-5/12'} flex flex-col justify-center overflow-y-auto`}>
+                <div 
+                  className="prose prose-lg max-w-none" 
+                  style={{ 
+                    color: theme.text,
+                    '--tw-prose-body': theme.text,
+                    '--tw-prose-headings': theme.title,
+                    '--tw-prose-links': theme.accent,
+                    '--tw-prose-bold': theme.title,
+                    '--tw-prose-counters': theme.accent,
+                    '--tw-prose-bullets': theme.accent,
+                    '--tw-prose-hr': theme.accentBg,
+                    '--tw-prose-quotes': theme.title,
+                    '--tw-prose-quote-borders': theme.accent,
+                    '--tw-prose-captions': theme.text,
+                    '--tw-prose-code': theme.title,
+                    '--tw-prose-pre-code': theme.bg,
+                    '--tw-prose-pre-bg': theme.title,
+                    '--tw-prose-th-borders': theme.accentBg,
+                    '--tw-prose-td-borders': theme.accentBg,
+                  } as React.CSSProperties}
+                >
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{contentArray.join('\n')}</ReactMarkdown>
+                </div>
               </div>
               <div className={`${isPortrait ? 'w-full h-3/5' : 'w-7/12'} flex items-center justify-center rounded-3xl shadow-lg border p-8`} style={{ backgroundColor: chartBg, borderColor: theme.accent + '20' }}>
                 {hasData ? renderChart() : (

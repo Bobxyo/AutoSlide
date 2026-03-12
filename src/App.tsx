@@ -7,6 +7,7 @@ import { ConfigPanel } from './components/ConfigPanel';
 import { SlideEditor } from './components/SlideEditor';
 import { exportToPPTX } from './services/export';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const defaultConfig: AppConfig = {
   geminiApiKey: import.meta.env.VITE_GEMINI_API_KEY || '',
@@ -67,6 +68,7 @@ export default function App() {
   }, [history]);
 
   const [topic, setTopic] = useState('');
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [report, setReport] = useState<string | null>(null);
   const [presentation, setPresentation] = useState<Presentation | null>(null);
   const [loading, setLoading] = useState(false);
@@ -74,10 +76,19 @@ export default function App() {
   const [showConfig, setShowConfig] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
 
+  useEffect(() => {
+    if (presentation && activeTaskId) {
+      setHistory(prev => prev.map(t => 
+        t.id === activeTaskId ? { ...t, presentation } : t
+      ));
+    }
+  }, [presentation, activeTaskId]);
+
   const handleGenerate = async () => {
     if (!topic) return;
     
     const newTaskId = Date.now().toString();
+    setActiveTaskId(newTaskId);
     const newTask: HistoryTask = {
       id: newTaskId,
       topic,
@@ -108,6 +119,7 @@ export default function App() {
       } else {
         generatedPresentation = await generatePresentation(generatedReport, config);
       }
+      generatedPresentation.rawMarkdown = generatedReport;
       setPresentation(generatedPresentation);
       
       setHistory(prev => prev.map(t => t.id === newTaskId ? { ...t, status: 'done', presentation: generatedPresentation } : t));
@@ -138,6 +150,7 @@ export default function App() {
   };
 
   const loadHistoryTask = (task: HistoryTask) => {
+    setActiveTaskId(task.id);
     setTopic(task.topic);
     setReport(task.report || null);
     setPresentation(task.presentation || null);
@@ -147,9 +160,13 @@ export default function App() {
   const deleteHistoryTask = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setHistory(prev => prev.filter(t => t.id !== id));
+    if (activeTaskId === id) {
+      startNew();
+    }
   };
 
   const startNew = () => {
+    setActiveTaskId(null);
     setTopic('');
     setReport(null);
     setPresentation(null);
@@ -283,11 +300,12 @@ export default function App() {
                         setLoadingMsg('Converting report to presentation...');
                         try {
                           const generatedPresentation = await generatePresentation(report, config);
+                          generatedPresentation.rawMarkdown = report;
                           setPresentation(generatedPresentation);
                           
                           // Update history
                           setHistory(prev => prev.map(t => 
-                            (t.topic === topic && t.report === report) 
+                            (t.id === activeTaskId) 
                               ? { ...t, status: 'done', presentation: generatedPresentation } 
                               : t
                           ));
@@ -307,14 +325,19 @@ export default function App() {
                     </button>
                   </div>
                   <div className="prose prose-neutral max-w-none">
-                    <ReactMarkdown>{typeof report === 'string' ? report : JSON.stringify(report)}</ReactMarkdown>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{typeof report === 'string' ? report : JSON.stringify(report)}</ReactMarkdown>
                   </div>
                 </div>
               )}
             </div>
           ) : (
             <GoogleOAuthProvider clientId={config.googleClientId || 'dummy_client_id'}>
-              <SlideEditor presentation={presentation} setPresentation={setPresentation} config={config} />
+              <SlideEditor 
+                presentation={presentation} 
+                setPresentation={setPresentation} 
+                config={config} 
+                onViewReport={() => setPresentation(null)}
+              />
             </GoogleOAuthProvider>
           )}
         </div>

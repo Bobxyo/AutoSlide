@@ -15,6 +15,7 @@ export interface Slide {
 export interface Presentation {
   title: string;
   slides: Slide[];
+  rawMarkdown?: string;
 }
 
 export interface AppConfig {
@@ -36,6 +37,15 @@ export interface AppConfig {
   orientation?: 'landscape' | 'portrait';
   pageSize?: 'web' | 'a4' | 'b5';
   directMarkdownRender?: boolean;
+  customTheme?: {
+    bg: string;
+    title: string;
+    text: string;
+    accent: string;
+    accentBg: string;
+    fontFamily?: string;
+    baseFontSize?: string;
+  };
 }
 
 export interface HistoryTask {
