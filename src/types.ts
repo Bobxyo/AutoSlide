@@ -2,7 +2,7 @@ export interface Slide {
   id: string;
   title: string;
   content: string[];
-  layout: 'title' | 'content' | 'image-right' | 'image-left' | 'image-top' | 'image-bottom' | 'quote' | 'chart' | 'markdown';
+  layout: 'title' | 'content' | 'image-right' | 'image-left' | 'image-top' | 'image-bottom' | 'quote' | 'chart' | 'markdown' | 'columns' | 'process' | 'comparison' | 'metric';
   chartType?: 'bar' | 'line' | 'pie' | 'radar' | 'area';
   imagePlaceholder?: {
     suggestedPrompt: string;
@@ -25,7 +25,7 @@ export interface AppConfig {
   openaiApiKey: string;
   openaiEndpoint: string;
   openaiModel: string;
-  imageProvider: 'gemini' | 'openai' | 'custom';
+  imageProvider: 'gemini' | 'openai' | 'custom' | 'grok';
   imageEndpoint: string;
   imageApiKey: string;
   imageModel: string;
@@ -33,6 +33,7 @@ export interface AppConfig {
   imageHeight: number;
   imageSteps: number;
   imageGuidance: number;
+  grokImageSize?: string;
   googleClientId?: string;
   orientation?: 'landscape' | 'portrait';
   pageSize?: 'web' | 'a4' | 'b5';

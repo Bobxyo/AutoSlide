@@ -152,15 +152,16 @@ export function ConfigPanel({ config, setConfig }: ConfigPanelProps) {
           >
             <option value="gemini">Gemini</option>
             <option value="openai">OpenAI Compatible (DALL-E, SiliconFlow, etc.)</option>
+            <option value="grok">Grok (xAI)</option>
             <option value="custom">Custom API (Raw JSON payload)</option>
           </select>
         </div>
 
-        {(config.imageProvider === 'custom' || config.imageProvider === 'openai') && (
+        {(config.imageProvider === 'custom' || config.imageProvider === 'openai' || config.imageProvider === 'grok') && (
           <>
             <div>
               <label className="block text-sm font-medium text-neutral-700 mb-1">Image API Endpoint</label>
-              <input type="text" value={config.imageEndpoint} onChange={(e) => handleChange('imageEndpoint', e.target.value)} placeholder={config.imageProvider === 'openai' ? 'https://api.openai.com/v1' : 'https://...'} className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+              <input type="text" value={config.imageEndpoint} onChange={(e) => handleChange('imageEndpoint', e.target.value)} placeholder={config.imageProvider === 'openai' ? 'https://api.openai.com/v1' : config.imageProvider === 'grok' ? 'http://10.10.10.222:8900/v1' : 'https://...'} className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500" />
             </div>
             <div>
               <label className="block text-sm font-medium text-neutral-700 mb-1">Image API Key</label>
@@ -168,8 +169,24 @@ export function ConfigPanel({ config, setConfig }: ConfigPanelProps) {
             </div>
             <div>
               <label className="block text-sm font-medium text-neutral-700 mb-1">Model ID</label>
-              <input type="text" value={config.imageModel} onChange={(e) => handleChange('imageModel', e.target.value)} placeholder={config.imageProvider === 'openai' ? 'dall-e-3' : 'flux-2-dev'} className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+              <input type="text" value={config.imageModel} onChange={(e) => handleChange('imageModel', e.target.value)} placeholder={config.imageProvider === 'openai' ? 'dall-e-3' : config.imageProvider === 'grok' ? 'grok-imagine-1.0' : 'flux-2-dev'} className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500" />
             </div>
+            {config.imageProvider === 'grok' && (
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">Image Size</label>
+                <select 
+                  value={config.grokImageSize || '1024x1024'}
+                  onChange={(e) => handleChange('grokImageSize', e.target.value)}
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                >
+                  <option value="1024x1024">1024x1024</option>
+                  <option value="1024x1792">1024x1792</option>
+                  <option value="1280x720">1280x720</option>
+                  <option value="1792x1024">1792x1024</option>
+                  <option value="720x1280">720x1280</option>
+                </select>
+              </div>
+            )}
             {config.imageProvider === 'custom' && (
               <div className="grid grid-cols-2 gap-2">
                 <div>

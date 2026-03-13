@@ -252,7 +252,7 @@ export function SlideEditor({ presentation, setPresentation, config, onViewRepor
               Slide {activeSlideIdx + 1} of {slides.length}
             </div>
             <div className="h-4 w-px bg-neutral-300"></div>
-            <select 
+              <select 
               value={activeSlide.layout}
               onChange={(e) => updateSlide({ ...activeSlide, layout: e.target.value as any })}
               className="text-sm border border-neutral-300 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500"
@@ -266,6 +266,10 @@ export function SlideEditor({ presentation, setPresentation, config, onViewRepor
               <option value="image-bottom">Image Bottom</option>
               <option value="quote">Quote</option>
               <option value="chart">Chart</option>
+              <option value="columns">Columns</option>
+              <option value="process">Process</option>
+              <option value="comparison">Comparison</option>
+              <option value="metric">Metric</option>
             </select>
             {activeSlide.layout === 'chart' && (
               <select
@@ -549,13 +553,15 @@ function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }
             <div className="mb-10 pl-6">
               <h2 className="text-4xl font-bold tracking-tight" style={{ color: theme.title }}>{title}</h2>
             </div>
-            <div className="flex-1 pl-6 grid grid-cols-1 gap-6 content-start">
+            <div className="flex-1 pl-6 grid grid-cols-1 gap-6 content-start overflow-hidden">
               {contentArray.map((c, i) => (
                 <div key={i} className="flex items-start gap-5 p-6 rounded-2xl shadow-sm border border-black/5" style={{ backgroundColor: theme.bg === '#0F172A' ? '#1E293B' : '#FFFFFF' }}>
                   <div className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold" style={{ backgroundColor: theme.accentBg, color: theme.accent }}>
                     {i + 1}
                   </div>
-                  <p className="text-xl leading-relaxed pt-1" style={{ color: theme.text }}>{c}</p>
+                  <div className="prose prose-lg max-w-none pt-1" style={{ color: theme.text, '--tw-prose-body': theme.text, '--tw-prose-headings': theme.title, '--tw-prose-links': theme.accent, '--tw-prose-bold': theme.title, '--tw-prose-counters': theme.accent, '--tw-prose-bullets': theme.accent, '--tw-prose-hr': theme.accentBg, '--tw-prose-quotes': theme.title, '--tw-prose-quote-borders': theme.accent, '--tw-prose-captions': theme.text, '--tw-prose-code': theme.title, '--tw-prose-pre-code': theme.bg, '--tw-prose-pre-bg': theme.title, '--tw-prose-th-borders': theme.accentBg, '--tw-prose-td-borders': theme.accentBg } as React.CSSProperties}>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{c}</ReactMarkdown>
+                  </div>
                 </div>
               ))}
             </div>
@@ -568,7 +574,7 @@ function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }
             <div className="mb-8 pl-6">
               <h2 className="text-4xl font-bold tracking-tight" style={{ color: theme.title }}>{title}</h2>
             </div>
-            <div className="flex-1 pl-6 overflow-y-auto">
+            <div className="flex-1 pl-6 overflow-hidden">
               <div 
                 className="prose prose-lg max-w-none" 
                 style={{ 
@@ -590,7 +596,7 @@ function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }
                   '--tw-prose-td-borders': theme.accentBg,
                 } as React.CSSProperties}
               >
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{contentArray.join('\n')}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{contentArray.join('\n\n')}</ReactMarkdown>
               </div>
             </div>
           </div>
@@ -601,9 +607,9 @@ function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }
             <div className={`${isPortrait ? 'w-full h-1/2 pb-6' : 'w-1/2 pr-12'} flex flex-col relative`}>
               <div className={`absolute ${isPortrait ? 'top-0 left-0' : 'top-12 left-0'} w-12 h-1.5 rounded-full`} style={{ backgroundColor: theme.accent }}></div>
               <h2 className={`text-4xl font-bold mb-10 ${isPortrait ? 'mt-4' : 'mt-8'} leading-tight`} style={{ color: theme.title }}>{title}</h2>
-              <div className="flex-1 overflow-y-auto">
+              <div className="flex-1 overflow-hidden">
                 <div className="prose prose-lg max-w-none" style={{ color: theme.text, '--tw-prose-body': theme.text, '--tw-prose-headings': theme.title, '--tw-prose-links': theme.accent, '--tw-prose-bold': theme.title, '--tw-prose-counters': theme.accent, '--tw-prose-bullets': theme.accent, '--tw-prose-hr': theme.accentBg, '--tw-prose-quotes': theme.title, '--tw-prose-quote-borders': theme.accent, '--tw-prose-captions': theme.text, '--tw-prose-code': theme.title, '--tw-prose-pre-code': theme.bg, '--tw-prose-pre-bg': theme.title, '--tw-prose-th-borders': theme.accentBg, '--tw-prose-td-borders': theme.accentBg } as React.CSSProperties}>
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{contentArray.join('\n')}</ReactMarkdown>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{contentArray.join('\n\n')}</ReactMarkdown>
                 </div>
               </div>
             </div>
@@ -625,9 +631,9 @@ function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }
             <div className={`${isPortrait ? 'w-full h-1/2 pt-6' : 'w-1/2 pl-12'} flex flex-col relative`}>
               <div className={`absolute ${isPortrait ? 'top-6 left-12' : 'top-12 left-12'} w-12 h-1.5 rounded-full`} style={{ backgroundColor: theme.accent }}></div>
               <h2 className={`text-4xl font-bold mb-10 ${isPortrait ? 'mt-4' : 'mt-8'} leading-tight`} style={{ color: theme.title }}>{title}</h2>
-              <div className="flex-1 overflow-y-auto">
+              <div className="flex-1 overflow-hidden">
                 <div className="prose prose-lg max-w-none" style={{ color: theme.text, '--tw-prose-body': theme.text, '--tw-prose-headings': theme.title, '--tw-prose-links': theme.accent, '--tw-prose-bold': theme.title, '--tw-prose-counters': theme.accent, '--tw-prose-bullets': theme.accent, '--tw-prose-hr': theme.accentBg, '--tw-prose-quotes': theme.title, '--tw-prose-quote-borders': theme.accent, '--tw-prose-captions': theme.text, '--tw-prose-code': theme.title, '--tw-prose-pre-code': theme.bg, '--tw-prose-pre-bg': theme.title, '--tw-prose-th-borders': theme.accentBg, '--tw-prose-td-borders': theme.accentBg } as React.CSSProperties}>
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{contentArray.join('\n')}</ReactMarkdown>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{contentArray.join('\n\n')}</ReactMarkdown>
                 </div>
               </div>
             </div>
@@ -644,9 +650,9 @@ function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }
             <div className="w-full h-1/2 pt-6 flex flex-col relative">
               <div className="absolute top-6 left-0 w-12 h-1.5 rounded-full" style={{ backgroundColor: theme.accent }}></div>
               <h2 className="text-4xl font-bold mb-6 mt-4 leading-tight" style={{ color: theme.title }}>{title}</h2>
-              <div className="flex-1 overflow-y-auto">
+              <div className="flex-1 overflow-hidden">
                 <div className="prose prose-lg max-w-none" style={{ color: theme.text, '--tw-prose-body': theme.text, '--tw-prose-headings': theme.title, '--tw-prose-links': theme.accent, '--tw-prose-bold': theme.title, '--tw-prose-counters': theme.accent, '--tw-prose-bullets': theme.accent, '--tw-prose-hr': theme.accentBg, '--tw-prose-quotes': theme.title, '--tw-prose-quote-borders': theme.accent, '--tw-prose-captions': theme.text, '--tw-prose-code': theme.title, '--tw-prose-pre-code': theme.bg, '--tw-prose-pre-bg': theme.title, '--tw-prose-th-borders': theme.accentBg, '--tw-prose-td-borders': theme.accentBg } as React.CSSProperties}>
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{contentArray.join('\n')}</ReactMarkdown>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{contentArray.join('\n\n')}</ReactMarkdown>
                 </div>
               </div>
             </div>
@@ -658,9 +664,9 @@ function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }
             <div className="w-full h-1/2 pb-6 flex flex-col relative">
               <div className="absolute top-0 left-0 w-12 h-1.5 rounded-full" style={{ backgroundColor: theme.accent }}></div>
               <h2 className="text-4xl font-bold mb-6 mt-4 leading-tight" style={{ color: theme.title }}>{title}</h2>
-              <div className="flex-1 overflow-y-auto">
+              <div className="flex-1 overflow-hidden">
                 <div className="prose prose-lg max-w-none" style={{ color: theme.text, '--tw-prose-body': theme.text, '--tw-prose-headings': theme.title, '--tw-prose-links': theme.accent, '--tw-prose-bold': theme.title, '--tw-prose-counters': theme.accent, '--tw-prose-bullets': theme.accent, '--tw-prose-hr': theme.accentBg, '--tw-prose-quotes': theme.title, '--tw-prose-quote-borders': theme.accent, '--tw-prose-captions': theme.text, '--tw-prose-code': theme.title, '--tw-prose-pre-code': theme.bg, '--tw-prose-pre-bg': theme.title, '--tw-prose-th-borders': theme.accentBg, '--tw-prose-td-borders': theme.accentBg } as React.CSSProperties}>
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{contentArray.join('\n')}</ReactMarkdown>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{contentArray.join('\n\n')}</ReactMarkdown>
                 </div>
               </div>
             </div>
@@ -767,7 +773,7 @@ function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }
               <h2 className="text-4xl font-bold tracking-tight" style={{ color: theme.title }}>{title}</h2>
             </div>
             <div className={`flex flex-1 ${isPortrait ? 'flex-col gap-6' : 'gap-10'}`}>
-              <div className={`${isPortrait ? 'w-full h-2/5' : 'w-5/12'} flex flex-col justify-center overflow-y-auto`}>
+              <div className={`${isPortrait ? 'w-full h-2/5' : 'w-5/12'} flex flex-col justify-center overflow-hidden`}>
                 <div 
                   className="prose prose-lg max-w-none" 
                   style={{ 
@@ -789,7 +795,7 @@ function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }
                     '--tw-prose-td-borders': theme.accentBg,
                   } as React.CSSProperties}
                 >
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{contentArray.join('\n')}</ReactMarkdown>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{contentArray.join('\n\n')}</ReactMarkdown>
                 </div>
               </div>
               <div className={`${isPortrait ? 'w-full h-3/5' : 'w-7/12'} flex items-center justify-center rounded-3xl shadow-lg border p-8`} style={{ backgroundColor: chartBg, borderColor: theme.accent + '20' }}>
@@ -803,6 +809,102 @@ function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }
             </div>
           </div>
         );
+      case 'columns':
+        return (
+          <div className="flex flex-col h-full relative" style={{ backgroundColor: theme.bg, padding: margin }}>
+            <div className="absolute top-0 left-0 w-2 h-full" style={{ backgroundColor: theme.accent }}></div>
+            <div className="mb-10 pl-6">
+              <h2 className="text-4xl font-bold tracking-tight" style={{ color: theme.title }}>{title}</h2>
+            </div>
+            <div className="flex-1 pl-6 grid grid-cols-2 gap-8 content-start overflow-hidden">
+              {contentArray.map((c, i) => (
+                <div key={i} className="flex flex-col gap-3 p-6 rounded-2xl shadow-sm border border-black/5" style={{ backgroundColor: theme.bg === '#0F172A' ? '#1E293B' : '#FFFFFF' }}>
+                  <div className="w-12 h-1.5 rounded-full" style={{ backgroundColor: theme.accent }}></div>
+                  <div className="prose prose-lg max-w-none" style={{ color: theme.text, '--tw-prose-body': theme.text, '--tw-prose-headings': theme.title, '--tw-prose-links': theme.accent, '--tw-prose-bold': theme.title, '--tw-prose-counters': theme.accent, '--tw-prose-bullets': theme.accent, '--tw-prose-hr': theme.accentBg, '--tw-prose-quotes': theme.title, '--tw-prose-quote-borders': theme.accent, '--tw-prose-captions': theme.text, '--tw-prose-code': theme.title, '--tw-prose-pre-code': theme.bg, '--tw-prose-pre-bg': theme.title, '--tw-prose-th-borders': theme.accentBg, '--tw-prose-td-borders': theme.accentBg } as React.CSSProperties}>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{c}</ReactMarkdown>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      case 'process':
+        return (
+          <div className="flex flex-col h-full relative" style={{ backgroundColor: theme.bg, padding: margin }}>
+            <div className="mb-12 text-center">
+              <h2 className="text-4xl font-bold tracking-tight inline-block relative" style={{ color: theme.title }}>
+                {title}
+                <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 w-24 h-1.5 rounded-full" style={{ backgroundColor: theme.accent }}></div>
+              </h2>
+            </div>
+            <div className="flex-1 flex items-center justify-center gap-4 overflow-hidden">
+              {contentArray.map((c, i) => (
+                <React.Fragment key={i}>
+                  <div className="flex-1 flex flex-col items-center text-center gap-4">
+                    <div className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold shadow-lg z-10" style={{ backgroundColor: theme.accent, color: theme.bg }}>
+                      {i + 1}
+                    </div>
+                    <div className="p-5 rounded-2xl shadow-sm border border-black/5 w-full" style={{ backgroundColor: theme.bg === '#0F172A' ? '#1E293B' : '#FFFFFF' }}>
+                      <div className="prose prose-sm max-w-none text-left" style={{ color: theme.text, '--tw-prose-body': theme.text, '--tw-prose-headings': theme.title, '--tw-prose-links': theme.accent, '--tw-prose-bold': theme.title, '--tw-prose-counters': theme.accent, '--tw-prose-bullets': theme.accent, '--tw-prose-hr': theme.accentBg, '--tw-prose-quotes': theme.title, '--tw-prose-quote-borders': theme.accent, '--tw-prose-captions': theme.text, '--tw-prose-code': theme.title, '--tw-prose-pre-code': theme.bg, '--tw-prose-pre-bg': theme.title, '--tw-prose-th-borders': theme.accentBg, '--tw-prose-td-borders': theme.accentBg } as React.CSSProperties}>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{c}</ReactMarkdown>
+                      </div>
+                    </div>
+                  </div>
+                  {i < contentArray.length - 1 && (
+                    <div className="w-8 h-1 rounded-full opacity-50" style={{ backgroundColor: theme.accent }}></div>
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
+          </div>
+        );
+      case 'comparison':
+        return (
+          <div className="flex flex-col h-full relative" style={{ backgroundColor: theme.bg, padding: margin }}>
+            <div className="mb-10 text-center">
+              <h2 className="text-4xl font-bold tracking-tight" style={{ color: theme.title }}>{title}</h2>
+            </div>
+            <div className="flex-1 grid grid-cols-2 gap-12 overflow-hidden">
+              {contentArray.slice(0, 2).map((c, i) => (
+                <div key={i} className="flex flex-col h-full rounded-3xl overflow-hidden shadow-lg border border-black/5" style={{ backgroundColor: theme.bg === '#0F172A' ? '#1E293B' : '#FFFFFF' }}>
+                  <div className="h-3 w-full" style={{ backgroundColor: i === 0 ? theme.accent : theme.text }}></div>
+                  <div className="p-8 flex-1 overflow-hidden">
+                    <div className="prose prose-lg max-w-none" style={{ color: theme.text, '--tw-prose-body': theme.text, '--tw-prose-headings': theme.title, '--tw-prose-links': theme.accent, '--tw-prose-bold': theme.title, '--tw-prose-counters': theme.accent, '--tw-prose-bullets': theme.accent, '--tw-prose-hr': theme.accentBg, '--tw-prose-quotes': theme.title, '--tw-prose-quote-borders': theme.accent, '--tw-prose-captions': theme.text, '--tw-prose-code': theme.title, '--tw-prose-pre-code': theme.bg, '--tw-prose-pre-bg': theme.title, '--tw-prose-th-borders': theme.accentBg, '--tw-prose-td-borders': theme.accentBg } as React.CSSProperties}>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{c}</ReactMarkdown>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      case 'metric':
+        return (
+          <div className="flex flex-col h-full relative" style={{ backgroundColor: theme.bg, padding: margin }}>
+            <div className="absolute top-0 left-0 w-2 h-full" style={{ backgroundColor: theme.accent }}></div>
+            <div className="mb-10 pl-6">
+              <h2 className="text-4xl font-bold tracking-tight" style={{ color: theme.title }}>{title}</h2>
+            </div>
+            <div className="flex-1 pl-6 grid grid-cols-2 gap-8 content-center overflow-hidden">
+              {slide.chartData && slide.chartData.length > 0 ? (
+                slide.chartData.slice(0, 4).map((data, i) => (
+                  <div key={i} className="flex flex-col justify-center p-8 rounded-3xl shadow-sm border border-black/5" style={{ backgroundColor: theme.bg === '#0F172A' ? '#1E293B' : '#FFFFFF' }}>
+                    <div className="text-6xl font-black mb-2" style={{ color: theme.accent }}>{data.value}</div>
+                    <div className="text-xl font-medium opacity-80" style={{ color: theme.text }}>{data.name}</div>
+                  </div>
+                ))
+              ) : (
+                contentArray.slice(0, 4).map((c, i) => (
+                  <div key={i} className="flex flex-col justify-center p-8 rounded-3xl shadow-sm border border-black/5" style={{ backgroundColor: theme.bg === '#0F172A' ? '#1E293B' : '#FFFFFF' }}>
+                    <div className="prose prose-lg max-w-none" style={{ color: theme.text, '--tw-prose-body': theme.text, '--tw-prose-headings': theme.title, '--tw-prose-links': theme.accent, '--tw-prose-bold': theme.title, '--tw-prose-counters': theme.accent, '--tw-prose-bullets': theme.accent, '--tw-prose-hr': theme.accentBg, '--tw-prose-quotes': theme.title, '--tw-prose-quote-borders': theme.accent, '--tw-prose-captions': theme.text, '--tw-prose-code': theme.title, '--tw-prose-pre-code': theme.bg, '--tw-prose-pre-bg': theme.title, '--tw-prose-th-borders': theme.accentBg, '--tw-prose-td-borders': theme.accentBg } as React.CSSProperties}>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{c}</ReactMarkdown>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        );
       default:
         return (
           <div className="flex flex-col h-full relative" style={{ backgroundColor: theme.bg, padding: margin }}>
@@ -810,13 +912,15 @@ function SlideCanvas({ slide, updateSlide, config, themeId, interactive = true }
             <div className="mb-10 pl-6">
               <h2 className="text-4xl font-bold tracking-tight" style={{ color: theme.title }}>{title}</h2>
             </div>
-            <div className="flex-1 pl-6 grid grid-cols-1 gap-6 content-start">
+            <div className="flex-1 pl-6 grid grid-cols-1 gap-6 content-start overflow-hidden">
               {contentArray.map((c, i) => (
                 <div key={i} className="flex items-start gap-5 p-6 rounded-2xl shadow-sm border border-black/5" style={{ backgroundColor: theme.bg === '#0F172A' ? '#1E293B' : '#FFFFFF' }}>
                   <div className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold" style={{ backgroundColor: theme.accentBg, color: theme.accent }}>
                     {i + 1}
                   </div>
-                  <p className="text-xl leading-relaxed pt-1" style={{ color: theme.text }}>{c}</p>
+                  <div className="prose prose-lg max-w-none pt-1" style={{ color: theme.text, '--tw-prose-body': theme.text, '--tw-prose-headings': theme.title, '--tw-prose-links': theme.accent, '--tw-prose-bold': theme.title, '--tw-prose-counters': theme.accent, '--tw-prose-bullets': theme.accent, '--tw-prose-hr': theme.accentBg, '--tw-prose-quotes': theme.title, '--tw-prose-quote-borders': theme.accent, '--tw-prose-captions': theme.text, '--tw-prose-code': theme.title, '--tw-prose-pre-code': theme.bg, '--tw-prose-pre-bg': theme.title, '--tw-prose-th-borders': theme.accentBg, '--tw-prose-td-borders': theme.accentBg } as React.CSSProperties}>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{c}</ReactMarkdown>
+                  </div>
                 </div>
               ))}
             </div>

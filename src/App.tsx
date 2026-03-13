@@ -24,6 +24,7 @@ const defaultConfig: AppConfig = {
   imageHeight: 2048,
   imageSteps: 30,
   imageGuidance: 7.5,
+  grokImageSize: '1024x1024',
   googleClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 };
 

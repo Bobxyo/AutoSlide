@@ -135,13 +135,28 @@ CRITICAL LANGUAGE REQUIREMENT: First, detect the language of the provided Report
 LAYOUT CONTEXT: ${layoutContext}
 
 Extract the key points into slides. 
+Your output MUST be a JSON object with the following structure:
+{
+  "title": "Presentation Title",
+  "slides": [
+    {
+      "id": "unique-string-id",
+      "title": "Slide Title",
+      "content": ["bullet point 1", "bullet point 2"],
+      "layout": "one of the allowed layouts",
+      "speakerNotes": "detailed speech script",
+      ...other optional fields
+    }
+  ]
+}
+
 For each slide, provide:
 - A compelling 'title'
 - 'content': An array of detailed bullet points (MUST NOT BE EMPTY). The generated slide content should be rich, vivid, and detailed. Do not overly simplify the content. Retain the depth and nuances of the original report.
-- 'layout': Choose the best layout from: 'title', 'content', 'markdown', 'image-right', 'image-left', 'image-top', 'image-bottom', 'quote', 'chart'.
+- 'layout': Choose the best layout from: 'title', 'content', 'markdown', 'image-right', 'image-left', 'image-top', 'image-bottom', 'quote', 'chart', 'columns', 'process', 'comparison', 'metric'.
 - 'chartType': If layout is 'chart', choose the best type from: 'bar', 'line', 'pie', 'radar', 'area'.
 - 'imagePlaceholder': If layout is 'image-right', 'image-left', 'image-top', or 'image-bottom', provide a highly descriptive 'suggestedPrompt' for an AI image generator.
-- 'chartData': If layout is 'chart', extract REAL numerical data from the report. Provide an array of objects with 'name' (string, the category/item name) and 'value' (number, the numerical value). DO NOT use placeholder names like "Item 1".
+- 'chartData': If layout is 'chart' or 'metric', extract REAL numerical data from the report. Provide an array of objects with 'name' (string, the category/item name) and 'value' (number, the numerical value). DO NOT use placeholder names like "Item 1".
 - 'speakerNotes': MUST be a highly detailed, verbatim speech script. It should be long enough to cover 1-2 minutes of speaking per slide, explaining the concepts in detail as if presenting to a live audience without any prior preparation. Include transitions between slides. Ensure this is in the EXACT SAME LANGUAGE as the report.
 
 CRITICAL: You MUST extract the information sources, references, or citations from the end of the report and include them as the final slide(s) of the presentation to ensure professional credibility.
@@ -168,7 +183,7 @@ ${report}`;
                   id: { type: Type.STRING },
                   title: { type: Type.STRING },
                   content: { type: Type.ARRAY, items: { type: Type.STRING } },
-                  layout: { type: Type.STRING, description: "Must be one of: 'title', 'content', 'markdown', 'image-right', 'image-left', 'image-top', 'image-bottom', 'quote', 'chart'" },
+                  layout: { type: Type.STRING, description: "Must be one of: 'title', 'content', 'markdown', 'image-right', 'image-left', 'image-top', 'image-bottom', 'quote', 'chart', 'columns', 'process', 'comparison', 'metric'" },
                   chartType: { type: Type.STRING, description: "Must be one of: 'bar', 'line', 'pie', 'radar', 'area'" },
                   imagePlaceholder: {
                     type: Type.OBJECT,
@@ -377,6 +392,44 @@ export async function generateImage(prompt: string, config: AppConfig): Promise<
       }
     }
     throw new Error("Failed to generate image with Gemini");
+  } else if (config.imageProvider === 'grok') {
+    const endpoint = config.imageEndpoint ? config.imageEndpoint.replace(/\/$/, '') : 'http://10.10.10.222:8900/v1';
+    const res = await fetch(`${endpoint}/images/generations`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${config.imageApiKey}`
+      },
+      body: JSON.stringify({
+        model: config.imageModel || "grok-imagine-1.0",
+        prompt: prompt,
+        n: 1,
+        size: config.grokImageSize || "1024x1024"
+      })
+    });
+    
+    if (!res.ok) {
+      throw new Error(`Grok Image API error: ${res.statusText}`);
+    }
+    
+    const contentType = res.headers.get("content-type") || "";
+    if (!contentType.includes("application/json")) {
+      const blob = await res.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    const data = await res.json();
+    if (data.data && data.data[0] && data.data[0].b64_json) {
+      return `data:image/png;base64,${data.data[0].b64_json}`;
+    } else if (data.data && data.data[0] && data.data[0].url) {
+      return data.data[0].url;
+    }
+    throw new Error("Unknown response format from Grok API");
   } else {
     // OpenAI compatible DALL-E
     const endpoint = config.imageEndpoint ? config.imageEndpoint.replace(/\/$/, '') : 'https://api.openai.com/v1';
