@@ -9,6 +9,8 @@ import { useGoogleLogin } from '@react-oauth/google';
 import { exportToGoogleSlides } from '../services/googleSlides';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 const COLORS = ['#4f46e5', '#818cf8', '#c7d2fe', '#e0e7ff', '#312e81', '#4338ca'];
 
@@ -22,6 +24,7 @@ interface SlideEditorProps {
 export function SlideEditor({ presentation, setPresentation, config, onViewReport }: SlideEditorProps) {
   const [activeSlideIdx, setActiveSlideIdx] = useState(0);
   const [exporting, setExporting] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
   
   const [undoStack, setUndoStack] = useState<Presentation[]>([]);
   const [redoStack, setRedoStack] = useState<Presentation[]>([]);
@@ -172,8 +175,42 @@ export function SlideEditor({ presentation, setPresentation, config, onViewRepor
     }
   };
 
-  const handleExportPDF = () => {
-    window.print();
+  const handleExportPDF = async () => {
+    setExportingPdf(true);
+    try {
+      const layoutConfig = getLayoutConfig(config);
+      const pdf = new jsPDF({
+        orientation: layoutConfig.isPortrait ? 'portrait' : 'landscape',
+        unit: 'px',
+        format: [layoutConfig.w, layoutConfig.h]
+      });
+
+      for (let i = 0; i < slides.length; i++) {
+        const slideElement = document.getElementById(`pdf-slide-${i}`);
+        if (slideElement) {
+          const canvas = await html2canvas(slideElement, {
+            scale: 2, // Higher quality
+            useCORS: true,
+            logging: false
+          });
+          
+          const imgData = canvas.toDataURL('image/jpeg', 0.95);
+          
+          if (i > 0) {
+            pdf.addPage([layoutConfig.w, layoutConfig.h], layoutConfig.isPortrait ? 'portrait' : 'landscape');
+          }
+          
+          pdf.addImage(imgData, 'JPEG', 0, 0, layoutConfig.w, layoutConfig.h);
+        }
+      }
+      
+      pdf.save(`${presentation.title || 'presentation'}.pdf`);
+    } catch (e) {
+      console.error('Error exporting PDF:', e);
+      alert('Error exporting PDF. Please try again.');
+    } finally {
+      setExportingPdf(false);
+    }
   };
 
   const handleExportMarkdown = () => {
@@ -322,9 +359,10 @@ export function SlideEditor({ presentation, setPresentation, config, onViewRepor
             </button>
             <button 
               onClick={handleExportPDF}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-neutral-700 bg-white border border-neutral-300 rounded-md hover:bg-neutral-50 transition-colors"
+              disabled={exportingPdf}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-neutral-700 bg-white border border-neutral-300 rounded-md hover:bg-neutral-50 transition-colors disabled:opacity-50"
             >
-              <Download className="w-4 h-4" />
+              {exportingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
               PDF
             </button>
             <button 
@@ -410,6 +448,35 @@ export function SlideEditor({ presentation, setPresentation, config, onViewRepor
           </div>
         </div>
       )}
+
+      {/* Hidden container for PDF export */}
+      <div 
+        id="pdf-export-container" 
+        style={{ 
+          position: 'absolute', 
+          left: '-9999px', 
+          top: '-9999px',
+          width: getLayoutConfig(config).w + 'px',
+          pointerEvents: 'none'
+        }}
+      >
+        {slides.map((slide, idx) => (
+          <div 
+            key={`pdf-slide-${slide.id}`} 
+            id={`pdf-slide-${idx}`}
+            style={{ 
+              width: getLayoutConfig(config).w + 'px', 
+              height: getLayoutConfig(config).h + 'px',
+              backgroundColor: 'white',
+              position: 'relative',
+              fontFamily: config.customTheme?.fontFamily || 'inherit',
+              fontSize: config.customTheme?.baseFontSize || 'inherit',
+            }}
+          >
+            <SlideCanvas slide={slide} config={config} themeId={selectedTheme} interactive={false} />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
